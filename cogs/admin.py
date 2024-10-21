@@ -274,6 +274,7 @@ class Admin(commands.Cog):
     originalMessage = await self.bot.log_message(embed = embed)
     newEventsEmbed = Embed(title="New Events", description="No new events")
     eventsLog = await self.bot.log_message("New Events", "No new events")
+    TBA_AUTH_KEY = os.getenv("TBA_API_KEY")
     reqheaders = {"X-TBA-Auth-Key": TBA_AUTH_KEY}
     session = await self.bot.get_session()
     try:
