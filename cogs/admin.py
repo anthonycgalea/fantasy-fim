@@ -278,7 +278,9 @@ class Admin(commands.Cog):
     session = await self.bot.get_session()
     try:
       requestURL = TBA_API_ENDPOINT + "district/" + str(year) + str(district) + "/events"
+      logger.info(requestURL)
       response = requests.get(requestURL, headers=reqheaders).json()
+      logger.info(response)
       if (not isinstance(response, list)):
         embed.description = f"District {district} does not exist on The Blue Alliance"
         await originalMessage.edit(embed=embed)
