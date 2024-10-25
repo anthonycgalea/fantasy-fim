@@ -43,7 +43,7 @@ swagger = Swagger(app,
         "basePath": "/api",        # This should match your API prefix
     },
     config={
-        "specs_route": "/api/apidocs/",  # This sets the URL for your API docs
+        "specs_route": "/apidocs/",  # This sets the URL for your API docs
     })
 CORS(app)
 
