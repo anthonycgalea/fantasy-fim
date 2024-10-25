@@ -31,6 +31,13 @@ app.config['SWAGGER'] = {
     'static_url_path': '/apidocs',
 }
 
+swagger_config = Swagger.DEFAULT_CONFIG
+swagger_config['swagger_ui_bundle_js'] = '//unpkg.com/swagger-ui-dist@3/swagger-ui-bundle.js'
+swagger_config['swagger_ui_standalone_preset_js'] = '//unpkg.com/swagger-ui-dist@3/swagger-ui-standalone-preset.js'
+swagger_config['jquery_js'] = '//unpkg.com/jquery@2.2.4/dist/jquery.min.js'
+swagger_config['swagger_ui_css'] = '//unpkg.com/swagger-ui-dist@3/swagger-ui.css'
+swagger_config['specs_route'] = "/api/apidocs/"
+
 swagger = Swagger(app, 
     template={
         "swagger": "2.0",
@@ -42,9 +49,8 @@ swagger = Swagger(app,
         "host": "fantasyfim.com",  # Update with your host
         "basePath": "/api",        # This should match your API prefix
     },
-    config={
-        "specs_route": "/api/apidocs/",  # This sets the URL for your API docs
-    })
+    config=swagger_config
+)
 CORS(app)
 
 # Configure the database
