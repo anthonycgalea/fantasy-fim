@@ -17,14 +17,10 @@ const Navbar = () => {
               <Link className="nav-link" to="/">Home</Link>
             </li>
             <li className="nav-item">
-                <a 
-                    className="nav-link" 
-                    href="http://fantasyfim.com/api/apidocs" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                >
-                    API
-                </a>
+              <Link className="nav-link" to="/eventData">Events</Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="http://fantasyfim.com/api/apidocs">API</Link>
             </li>
             <li className="nav-item">
               <Link className="nav-link" to="https://github.com/anthonycgalea/fantasy-fim">GitHub</Link>

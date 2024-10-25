@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flasgger import Swagger
 from sqlalchemy import create_engine
 from sqlalchemy import cast, Integer
+from sqlalchemy import func, case
 from sqlalchemy.orm import sessionmaker
 import os
 from models.base import Base
@@ -440,7 +441,6 @@ def get_roster_weeks(leagueId):
     
     session.close()
     return jsonify(output)
-
 
 @app.route('/api/drafts/<int:draftId>/picks', methods=["GET"])
 def get_draft_picks(draftId):
@@ -1535,6 +1535,126 @@ def get_available_teams_fim(leagueId):
             return jsonify({"error": "No available teams found"}), 404
 
         return jsonify(list(available_teams.values()))
+
+@app.route('/api/fimeventdata', methods=['GET'])
+def get_fim_event_data():
+    """
+    Retrieve FiM event statistics
+    ---
+    tags:
+      - FiM Event Data
+    summary: Get event statistics for FiM events
+    description: >
+        Returns statistics for each FiM event, including the number of teams, maximum EPA, 8th and 24th highest EPA, 
+        average EPA, and median EPA values.
+    responses:
+      200:
+        description: A JSON array of event statistics
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  event_name:
+                    type: string
+                    description: The name of the event.
+                    example: "FiM District Detroit Event"
+                  teamcount:
+                    type: integer
+                    description: Number of teams in the event.
+                    example: 40
+                  maxepa:
+                    type: number
+                    format: float
+                    description: Maximum EPA value for the event.
+                    example: 85.4
+                  top8epa:
+                    type: number
+                    format: float
+                    description: The 8th highest EPA value for the event.
+                    example: 75.3
+                  top24epa:
+                    type: number
+                    format: float
+                    description: The 24th highest EPA value for the event.
+                    example: 60.2
+                  avgepa:
+                    type: number
+                    format: float
+                    description: Average EPA value for all teams in the event.
+                    example: 50.7
+                  medianepa:
+                    type: number
+                    format: float
+                    description: Median EPA value for all teams in the event.
+                    example: 55.1
+      500:
+        description: Error retrieving event data
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  description: Error message.
+                  example: "An error occurred while processing the request."
+    """
+    session = Session()
+    try:
+        # Query to retrieve event data
+        subquery = (
+            session.query(
+                TeamScore.team_key.label('team'),
+                TeamScore.event_key.label('event'),
+                StatboticsData.year_end_epa.label('epa'),
+                func.row_number().over(
+                    partition_by=TeamScore.event_key,
+                    order_by=StatboticsData.year_end_epa.desc()
+                ).label('rank')
+            )
+            .join(StatboticsData, TeamScore.team_key == StatboticsData.team_number)
+            .join(FRCEvent, TeamScore.event_key == FRCEvent.event_key)
+            .filter(StatboticsData.year == 2024, FRCEvent.year == 2025)
+            .subquery()
+        )
+
+        query = (
+            session.query(
+                FRCEvent.event_name,
+                func.count(subquery.c.team).label('teamcount'),
+                func.max(subquery.c.epa).label('maxepa'),
+                func.max(case((subquery.c.rank == 8, subquery.c.epa), else_=None)).label('top8epa'),
+                func.max(case((subquery.c.rank == 24, subquery.c.epa), else_=None)).label('top24epa'),
+                func.avg(subquery.c.epa).label('avgepa'),
+                func.percentile_cont(0.5).within_group(subquery.c.epa).label('medianepa')
+            )
+            .join(FRCEvent, FRCEvent.event_key == subquery.c.event)
+            .group_by(FRCEvent.event_name)
+            .order_by(func.avg(subquery.c.epa).desc())
+        )
+
+        results = [
+            {
+                'event_name': row.event_name,
+                'teamcount': row.teamcount,
+                'maxepa': row.maxepa,
+                'top8epa': row.top8epa,
+                'top24epa': row.top24epa,
+                'avgepa': row.avgepa,
+                'medianepa': row.medianepa
+            }
+            for row in query.all()
+        ]
+
+        return jsonify(results), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        session.close()
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)  # Bind to all IPs
