@@ -22,7 +22,7 @@ app.config['SWAGGER'] = {
     'specs': [
         {
             'endpoint': 'apispec_1',
-            'route': '/apidocs/swagger.json',
+            'route': '/api/apidocs/swagger.json',
             'rule_filter': lambda rule: True,  # All rules are included
             'model_filter': lambda tag: True  # All models are included
         }
