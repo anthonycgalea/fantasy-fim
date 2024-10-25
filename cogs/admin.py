@@ -291,7 +291,7 @@ class Admin(commands.Cog):
       first = True
       for event in response:
         week=int(event["week"])+1
-        if week < 6:
+        if event["event_type"] == 1:
           eventKey = str(event["key"])
           eventName = str(event["name"])
           year=eventKey[:4]
@@ -303,7 +303,7 @@ class Admin(commands.Cog):
             logger.info(f"Inserting event {eventKey}: {eventName}")
             newEventsEmbed.description += f"Found new event {eventKey}: {eventName}\n"
             await eventsLog.edit(embed=newEventsEmbed)
-            isFiM = False
+            isFiM = district == "fim"
             eventToAdd = FRCEvent(event_key=eventKey, event_name=eventName, year=year, week=week, is_fim=isFiM)
             session.add(eventToAdd)
           elif not (eventResult.first().event_name == eventName\
@@ -345,7 +345,7 @@ class Admin(commands.Cog):
                 teamRegistrationChangeEmbed = Embed(title=f"{eventKey} registration changes", description=f"Team {team.team_key} un-registered from {team.event_key}")
                 embedSentYet = True
               else:
-                teamRegistrationChangeEmbed.description+=f"Team {team.team_key} un-registered from {team.event_key}"
+                teamRegistrationChangeEmbed.description+=f"\nTeam {team.team_key} un-registered from {team.event_key}"
                 await teamRegistrationChangeMsg.edit(embed=teamRegistrationChangeEmbed)
         i+=1
       session.commit()
