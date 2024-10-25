@@ -26,8 +26,7 @@ const Drafts = () => {
           api.get(`/drafts/${draftId}/picks`),
           api.get(`/drafts/${draftId}/availableTeams`),
           api.get(`/leagues/${draftResponse.data.league_id}`),
-          api.get(`/leagues/${draftResponse.data.league_id}/fantasyTeams`), 
-          api.get(`/drafts/${draftId}/fantasyScores`)
+          api.get(`/leagues/${draftResponse.data.league_id}/fantasyTeams`)
         ]);
         
         setDraft(draftResponse.data);
