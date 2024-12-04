@@ -41,6 +41,7 @@ class Scores(commands.Cog):
           session.query(TeamScore)
           .join(FRCEvent, TeamScore.event_key == FRCEvent.event_key)  # Join with FRCEvent
           .filter(TeamScore.team_key == frcTeam)  # Filter by the team key
+          .filter(FRCEvent.year == leagueToGrabReport.year)
           .order_by(FRCEvent.week)  # Order by the week attribute
           .all()
       )
@@ -59,10 +60,6 @@ class Scores(commands.Cog):
 
       # Send the embed (example)
       await message.edit(embed=embed)
-
-  @app_commands.command(name="scores", description="Retrieve Scores")
-  async def getScores(self, interaction: discord.Interaction):
-    await interaction.response.send_message("retrieving scores")
 
   @app_commands.command(name="getrankings", description="Retrieves rankings for the channel's league")
   async def getRankings(self, interaction: discord.Interaction):
