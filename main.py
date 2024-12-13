@@ -141,4 +141,4 @@ class FantasyFiMBot(commands.Bot):
 
 bot = FantasyFiMBot()
 
-bot.run(os.getenv("DISCORD_BOT_TOKEN"))
+bot.run(os.getenv("DISCORD_BOT_TOKEN"), reconnect=True)
