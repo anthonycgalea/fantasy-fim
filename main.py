@@ -45,7 +45,7 @@ class FantasyFiMBot(commands.Bot):
         self.loop.create_task(self.dont_crash_task())
 
     async def dont_crash_task(self):
-        await self.get_all_channels()
+        self.get_all_channels()
         time.sleep(50)
 
     def run_scheduled_district_update(self):
