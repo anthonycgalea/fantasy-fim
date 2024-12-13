@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import cast, Integer
 from sqlalchemy import func, case
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import and_
 import os
 from models.base import Base
 from models.scores import *
@@ -1506,7 +1507,8 @@ def get_available_teams_fim(leagueId):
         ).join(
             FRCEvent, TeamScore.event_key == FRCEvent.event_key
         ).outerjoin(
-            TeamOwned, Team.team_number == TeamOwned.team_key
+            TeamOwned, 
+            and_(Team.team_number == TeamOwned.team_key, TeamOwned.league_id==leagueId)
         ).outerjoin(
             TeamOnWaivers, Team.team_number == TeamOnWaivers.team_number
         ).filter(

@@ -1050,7 +1050,7 @@ class Admin(commands.Cog):
         return
       forum = await self.getForum()
       nameOfDraft = f"{leagues.first().league_name} draft for {event_key}"
-      thread = (await forum.create_thread(content="test",name=nameOfDraft))[0]
+      thread = (await forum.create_thread(content=f"{leagues.first().league_name} draft for {event_key}",name=nameOfDraft))[0]
       threadId = thread.id
       newDraftId = await self.getDraftId()
       draftToCreate = Draft(draft_id=newDraftId, league_id=leagueid, rounds=rounds, event_key=event_key, discord_channel=threadId)
