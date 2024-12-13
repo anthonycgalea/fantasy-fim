@@ -42,7 +42,7 @@ class FantasyFiMBot(commands.Bot):
         return await logChannel.send(embed = embed)
     
     async def dontcrash(self):
-        self.get_all_channels()
+        await self.get_all_channels()
         time.sleep(50)
 
     def run_scheduled_district_update(self):
