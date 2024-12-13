@@ -41,7 +41,10 @@ class FantasyFiMBot(commands.Bot):
             embed=embed
         return await logChannel.send(embed = embed)
     
-    async def dontcrash(self):
+    def dontcrash(self):
+        self.loop.create_task(self.dont_crash_task())
+
+    async def dont_crash_task(self):
         await self.get_all_channels()
         time.sleep(50)
 
