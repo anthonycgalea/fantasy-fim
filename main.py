@@ -1,4 +1,4 @@
-import discord
+import discord, asyncio
 from discord.ext import commands
 from discord import Embed
 import os
@@ -40,6 +40,10 @@ class FantasyFiMBot(commands.Bot):
         if not embed == None:
             embed=embed
         return await logChannel.send(embed = embed)
+    
+    async def dontcrash(self):
+        self.get_all_channels()
+        time.sleep(50)
 
     def run_scheduled_district_update(self):
         while True:
@@ -135,6 +139,7 @@ class FantasyFiMBot(commands.Bot):
             type=discord.ActivityType.competing, name=str("Fantasy FiM!")))
         
         threading.Thread(target=self.run_scheduled_district_update, daemon=True).start()
+        threading.Thread(target=self.dontcrash, daemon=True).start()
 
         logger.info("Bot startup complete!")
 
