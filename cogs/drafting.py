@@ -307,7 +307,8 @@ class Drafting(commands.Cog):
                 await message.edit(content=f"Team {team_number} is not able to be drafted in this draft.")
         else:
             await message.edit(content=f"Team {team_number} has already been picked. Please try again.")
-        await self.postDraftBoard(interaction)
+        #await self.postDraftBoard(interaction)
+        await message.channel.send(content=f"http://fantasyfim.com/drafts/{draft_id}")
         await self.postSuggestedTeams(interaction)
         await self.notifyNextPick(interaction, draft_id=draft_id)
         if (await self.getCurrentPickTeamId(draft_id=draft_id) == '-1'):
@@ -486,11 +487,11 @@ class Drafting(commands.Cog):
     await interaction.response.send_message(f"Attempting to pick team {team_number}.", ephemeral=True)
     await self.makeDraftPickHandler(interaction=interaction, team_number=team_number, force=False)
 
-  @app_commands.command(name="draftboard", description="Re-post the Draft Board")
+  """@app_commands.command(name="draftboard", description="Re-post the Draft Board")
   @commands.cooldown(rate=1, per=60)
   async def repost_draft_board(self, interaction: discord.Interaction):
     await interaction.response.send_message("Sending draft board...")
-    await self.postDraftBoard(interaction)
+    await self.postDraftBoard(interaction)"""
 
   @app_commands.command(name="suggest", description="Provides a list of suggested teams based on the previous season's year-end EPA.")
   @commands.cooldown(rate=1, per=60)
