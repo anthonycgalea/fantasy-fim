@@ -91,7 +91,7 @@ class General(commands.Cog):
     draft = session.query(Draft).where(Draft.discord_channel==str(interaction.channel_id))
     if (draft.count() == 0):
       await interaction.response.send_message("No draft associated with this channel")
-    draftid = draft.first().league_id
+    draftid = draft.first().draft_id
     await interaction.response.send_message(f"{websiteURL}/drafts/{draftid}")
     session.close()
 
