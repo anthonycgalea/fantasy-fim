@@ -283,7 +283,7 @@ class ManageTeam(commands.Cog):
             .filter(TeamStarted.team_number==dropTeam).filter(TeamStarted.week >= currentWeek.week).delete()
             session.flush()
             session.query(TeamOwned).filter(TeamOwned.league_id==fantasyTeam.league_id).filter(TeamOwned.team_key==dropTeam).delete()
-            draftSoNotFail: Draft = session.query(Draft).filter(Draft.league_id==fantasyTeam.league_id).filter(Draft.event_key=="fim").first()
+            draftSoNotFail: Draft = session.query(Draft).filter(Draft.league_id==fantasyTeam.league_id).filter(Draft.event_key=="2025fim").first()
             session.flush()
             newTeamToAdd = TeamOwned(
                 team_key=str(addTeam),
