@@ -500,6 +500,7 @@ def get_draft_picks(draftId):
     draft_picks = session.query(DraftPick).filter(DraftPick.draft_id == draftId).order_by(DraftPick.pick_number.asc()).all()
 
     draft: Draft = session.query(Draft).filter(Draft.draft_id==draftId).first()
+    league: League = draft.league
 
     if not draft_picks:
         session.close()
@@ -512,6 +513,7 @@ def get_draft_picks(draftId):
             session.query(TeamScore.event_key, FRCEvent.week)
             .join(FRCEvent, TeamScore.event_key == FRCEvent.event_key)
             .filter(TeamScore.team_key == pick.team_number)
+            .filter(FRCEvent.year == league.year)
             .all()
         )
         
