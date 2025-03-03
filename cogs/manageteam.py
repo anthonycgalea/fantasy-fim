@@ -30,7 +30,7 @@ class ManageTeam(commands.Cog):
 
     async def getWaiverClaimPriority(self, fantasyId):
         session = await self.bot.get_session()
-        waiverprio = session.query(WaiverClaim).filter(WaiverClaim.fantasy_team==fantasyId).order_by(WaiverClaim.priority.desc()).first()
+        waiverprio = session.query(WaiverClaim).filter(WaiverClaim.fantasy_team_id==fantasyId).order_by(WaiverClaim.priority.desc()).first()
         if not waiverprio:
             return 1
         else:
