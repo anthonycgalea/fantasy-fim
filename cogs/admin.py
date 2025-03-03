@@ -58,6 +58,7 @@ class Admin(commands.Cog):
             .join(Team, Team.team_number == TeamScore.team_key)
             .join(FRCEvent, TeamScore.event_key == FRCEvent.event_key)
             .filter(Team.is_fim == True, FRCEvent.week == currentWeek.week)
+            .filter(FRCEvent.year==currentWeek.year)
             .all()
         )
 
