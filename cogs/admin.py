@@ -64,7 +64,7 @@ class Admin(commands.Cog):
         teams_to_put_on_waivers = []
         for team_number in competing_teams:
             is_owned = session.query(TeamOwned).filter(TeamOwned.league_id==league.league_id, TeamOwned.team_key == team_number[0]).first() is not None
-            is_on_waivers = session.query(TeamOnWaivers).filter(TeamOnWaivers.team_number == team_number[0]).first() is not None
+            is_on_waivers = session.query(TeamOnWaivers).filter(TeamOnWaivers.team_number == team_number[0], TeamOnWaivers.league_id==league.league_id).first() is not None
             
             if not is_owned and not is_on_waivers:
                 teams_to_put_on_waivers.append(team_number[0])
@@ -75,7 +75,7 @@ class Admin(commands.Cog):
                 for team_number in teams_to_put_on_waivers
             ]
             for wTeam in team_on_waivers_objects:
-              if (session.query(TeamOnWaivers).filter(TeamOnWaivers.league_id==wTeam.league_id, TeamOnWaivers.team_number==wTeam.team_number).count() == 0):
+              if (session.query(TeamOnWaivers).filter(TeamOnWaivers.league_id==league.league_id, TeamOnWaivers.team_number==wTeam.team_number).count() == 0):
                 session.add(wTeam)
                 session.flush()
             #session.bulk_save_objects(team_on_waivers_objects)
