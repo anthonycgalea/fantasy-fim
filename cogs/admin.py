@@ -74,8 +74,11 @@ class Admin(commands.Cog):
                 TeamOnWaivers(league_id=league.league_id, team_number=team_number) 
                 for team_number in teams_to_put_on_waivers
             ]
-            
-            session.bulk_save_objects(team_on_waivers_objects)
+            for wTeam in team_on_waivers_objects:
+              if (session.query(TeamOnWaivers).filter(TeamOnWaivers.league_id==wTeam.league_id, TeamOnWaivers.team_number==wTeam.team_number).count() == 0):
+                session.add(wTeam)
+                session.flush()
+            #session.bulk_save_objects(team_on_waivers_objects)
             session.commit()
             await message.channel.send(embed=Embed(title=f"Placed teams on waivers for league {league.league_name}",description=f"{teams_to_put_on_waivers}"))
         else:
