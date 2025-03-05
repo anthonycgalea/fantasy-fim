@@ -1341,7 +1341,7 @@ class Admin(commands.Cog):
                     .filter(TeamStarted.team_number==waiverclaim.team_to_drop).filter(TeamStarted.week >= week.week).delete()
                     session.flush()
                     session.query(TeamOwned).filter(TeamOwned.league_id==fantasyTeam.league_id).filter(TeamOwned.team_key==waiverclaim.team_to_drop).delete()
-                    draftSoNotFail: Draft = session.query(Draft).filter(Draft.league_id==fantasyTeam.league_id).filter(Draft.event_key=="fim").first()
+                    draftSoNotFail: Draft = session.query(Draft).filter(Draft.league_id==fantasyTeam.league_id).filter(Draft.event_key==str(league.year)+"fim").first()
                     session.flush()
                     newTeamToAdd = TeamOwned(
                         team_key=str(waiverclaim.team_claimed),
