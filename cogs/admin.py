@@ -561,7 +561,8 @@ class Admin(commands.Cog):
 
         # Retrieve all scores for the league in the current week
         scoresToRank = session.query(FantasyScores).filter(
-            FantasyScores.league_id == league.league_id
+            FantasyScores.league_id == league.league_id,
+            FantasyScores.week == week
         ).order_by(FantasyScores.weekly_score.desc()).all()
 
         # Special case: If this is States, lock the top 3 teams from previous weeks
