@@ -295,7 +295,7 @@ class Admin(commands.Cog):
       first = True
       for event in response:
         week=int(event["week"])+1
-        if event["event_type"] == 1:
+        if event["event_type"] in [1,5]:
           eventKey = str(event["key"])
           eventName = str(event["name"])
           year=eventKey[:4]
