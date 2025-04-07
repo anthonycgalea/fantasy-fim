@@ -589,7 +589,7 @@ class Admin(commands.Cog):
 
             # Assign rank points manually for locked top 3
             for i, teamscore in enumerate(lockedTeamsRanked):
-                teamscore.rank_points = len(fantasyTeams) - i  # Assign rank points from the top
+                teamscore.rank_points = 100 - i*25  # Assign rank points from the top
 
             # Remove the top 3 from the scoresToRank, leaving the rest to be ranked normally
             scoresToRank = [score for score in scoresToRank if score.fantasy_team_id not in lockedTop3TeamIds]
