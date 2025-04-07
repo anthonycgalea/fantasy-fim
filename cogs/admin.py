@@ -693,7 +693,7 @@ class Admin(commands.Cog):
     for league in leagues:
         teams = session.query(FantasyScores).filter(FantasyScores.league_id == league.league_id)\
                     .filter(FantasyScores.week == week)\
-                    .order_by(FantasyScores.weekly_score.desc()).all()
+                    .order_by(FantasyScores.rank_points.desc()).all()
         if not teams:
             continue
         if week_status.scores_finalized:
