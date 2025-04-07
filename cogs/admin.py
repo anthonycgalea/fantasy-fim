@@ -512,7 +512,15 @@ class Admin(commands.Cog):
     session = await self.bot.get_session()
     message = await interaction.original_response()
     allLeagues = session.query(League).filter(League.is_fim==True).filter(League.year==year).all()
-
+    weekStatus = session.query(WeekStatus).filter(WeekStatus.week==week).filter(WeekStatus.year==year)
+    if (weekStatus.count() == 0):
+      await message.edit(content="No week to score.")
+      session.close()
+      return
+    elif (weekStatus.first().scores_finalized == True):
+      await message.edit(content="Scores are already finalized.")
+      session.close()
+      return
     for league in allLeagues:
         fantasyTeams = session.query(FantasyTeam).filter(FantasyTeam.league_id==league.league_id).all()
 
