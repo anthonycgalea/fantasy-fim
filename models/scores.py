@@ -76,7 +76,10 @@ class TeamScore(Base):
     self.qual_points=round(result)
   
   def update_alliance_points(self, pick: int=17): #17 if unpicked
-    self.alliance_points=17-pick
+    if pick == None:
+      self.alliance_points=0
+    else:
+      self.alliance_points=17-pick
 
   def update_elim_points(self, lost_match_12=False,lost_match_13=False, lost_finals: bool = False, won_finals: bool = False):
     points = 0
