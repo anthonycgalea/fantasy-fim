@@ -31,7 +31,6 @@ const DraftBoard = () => {
   const draftOrder = useDraftOrder(draftId)
   const fantasyTeams = useFantasyTeams(league.data?.league_id.toString())
   const availableTeams = useAvailableTeams(draftId)
-  const location = useLocation()
 
   const [selectedWeeks, setSelectedWeeks] = useState<number[]>([1, 2, 3, 4, 5])
   const [tab, setTab] = useState<'draft' | 'leagueWeeks'>('draft')
