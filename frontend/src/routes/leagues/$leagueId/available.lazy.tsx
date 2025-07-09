@@ -2,6 +2,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import { useLeague } from "@/api/useLeague";
 import { useLeagueAvailableTeams } from "@/api/useLeagueAvailableTeams";
 import { useStatboticsTeamYears } from "@/api/useStatboticsTeamYears";
+import { useCurrentWeek } from "@/api/useCurrentWeek";
 import React from "react";
 import { useTeamAvatar } from "@/api/useTeamAvatar";
 
@@ -42,8 +43,16 @@ export const AvailableTeamsPage = () => {
   const { leagueId } = Route.useParams();
   const league = useLeague(leagueId);
   const availableTeams = useLeagueAvailableTeams(leagueId);
+  const currentWeek = useCurrentWeek();
   const prevYear = (league.data?.year ?? 0) - 1;
-  const epaYear = league.data?.offseason ? league.data?.year : prevYear;
+  let epaYear = league.data?.offseason ? league.data?.year : prevYear;
+  if (
+    !league.data?.offseason &&
+    currentWeek.data &&
+    currentWeek.data.year === league.data?.year
+  ) {
+    epaYear = currentWeek.data.week === 1 ? prevYear : league.data.year;
+  }
   const teamNumbers = availableTeams.data?.map((t) => t.team_number) ?? [];
   const teamEpas = useStatboticsTeamYears(teamNumbers, epaYear);
   const [selectedWeeks, setSelectedWeeks] = React.useState<number[]>([1, 2, 3, 4, 5]);

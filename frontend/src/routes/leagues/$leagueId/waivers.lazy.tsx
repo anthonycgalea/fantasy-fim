@@ -2,6 +2,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import { useLeague } from "@/api/useLeague";
 import { useWaiverTeams } from "@/api/useWaiverTeams";
 import { useWaiverPriority } from "@/api/useWaiverPriority";
+import { useCurrentWeek } from "@/api/useCurrentWeek";
 import { WaiverPriority } from "@/types/WaiverPriority";
 import { useState } from "react";
 import { useTeamAvatar } from "@/api/useTeamAvatar";
@@ -53,6 +54,7 @@ export const WaiversPage = () => {
   const league = useLeague(leagueId);
   const waiverTeams = useWaiverTeams(leagueId);
   const waiverPriority = useWaiverPriority(leagueId);
+  const currentWeek = useCurrentWeek();
 
   const [activeTab, setActiveTab] = useState<'teams' | 'priority'>('teams');
   const [selectedWeeks, setSelectedWeeks] = useState<number[]>([1, 2, 3, 4, 5]);
@@ -76,7 +78,14 @@ export const WaiversPage = () => {
 
     const weeks = [1, 2, 3, 4, 5];
     const prevYear = (league.data.year ?? 0) - 1;
-    const epaYear = league.data.offseason ? league.data.year : prevYear;
+    let epaYear = league.data.offseason ? league.data.year : prevYear;
+    if (
+      !league.data.offseason &&
+      currentWeek.data &&
+      currentWeek.data.year === league.data.year
+    ) {
+      epaYear = currentWeek.data.week === 1 ? prevYear : league.data.year;
+    }
 
     const teams =
       waiverTeams.data
