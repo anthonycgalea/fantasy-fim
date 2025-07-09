@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useLocation } from '@tanstack/react-router'
 import { useDraft } from '@/api/useDraft'
 import { useLeague } from '@/api/useLeague'
 import { usePicks } from '@/api/usePicks'
@@ -139,14 +139,28 @@ const DraftBoard = () => {
     )
   }
 
+  const location = useLocation()
+
   return (
     <div className="w-full min-w-[1000px] overflow-x-scroll overflow-y-scroll">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-center flex-1">{league.data?.league_name}</h1>
+      <div className="flex flex-col items-center">
+        <h1 className="text-3xl font-bold text-center">{league.data?.league_name}</h1>
         {league.data && !league.data.offseason && (
-          <Link to="/leagues/$leagueId" params={{ leagueId: league.data.league_id.toString() }}>
-            <Button variant="outline">Back to League</Button>
-          </Link>
+          <div className="flex gap-2 mt-2">
+            <Link to="/drafts/$draftId" params={{ draftId }}>
+              <Button variant={location.pathname.endsWith('/leagueWeeks') ? 'outline' : 'default'}>
+                Draft
+              </Button>
+            </Link>
+            <Link to="/drafts/$draftId/leagueWeeks" params={{ draftId }}>
+              <Button variant={location.pathname.endsWith('/leagueWeeks') ? 'default' : 'outline'}>
+                League Weeks
+              </Button>
+            </Link>
+            <Link to="/leagues/$leagueId" params={{ leagueId: league.data.league_id.toString() }}>
+              <Button variant="outline">Back to League</Button>
+            </Link>
+          </div>
         )}
       </div>
       {league.data.offseason && (
