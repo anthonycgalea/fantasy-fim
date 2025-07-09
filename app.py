@@ -1698,5 +1698,11 @@ def get_fim_event_data():
         session.close()
 
 
+@app.route('/api/eventData', methods=['GET'])
+def get_event_data():
+    """Alias for ``/api/fimeventdata`` maintained for backwards compatibility."""
+    return get_fim_event_data()
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)  # Bind to all IPs
