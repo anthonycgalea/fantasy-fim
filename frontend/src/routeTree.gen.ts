@@ -15,27 +15,27 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Route as rootRoute } from './routes/__root'
 import { Route as LeaguesLeagueIdImport } from './routes/leagues/$leagueId'
 import { Route as DraftsDraftIdImport } from './routes/drafts/_.$draftId'
-import { Route as LeaguesLeagueIdRostersLazyImport } from './routes/leagues/$leagueId/rosters.lazy'
-import { Route as LeaguesLeagueIdWaiversLazyImport } from './routes/leagues/$leagueId/waivers.lazy'
-import { Route as DraftsDraftIdScoresLazyImport } from './routes/drafts/$draftId/scores.lazy'
-import { Route as DraftsDraftIdLeagueWeeksLazyImport } from './routes/drafts/$draftId/leagueWeeks.lazy'
 
 // Create Virtual Routes
 
+const OffseasonDraftsLazyImport = createFileRoute('/offseasonDrafts')()
+const EventDataLazyImport = createFileRoute('/eventData')()
 const IndexLazyImport = createFileRoute('/')()
+const LeaguesIndexLazyImport = createFileRoute('/leagues/')()
+const LeaguesLeagueIdWaiversLazyImport = createFileRoute(
+  '/leagues/$leagueId/waivers',
+)()
 const LeaguesLeagueIdScoresLazyImport = createFileRoute(
   '/leagues/$leagueId/scores',
+)()
+const LeaguesLeagueIdRostersLazyImport = createFileRoute(
+  '/leagues/$leagueId/rosters',
 )()
 const LeaguesLeagueIdRankingsLazyImport = createFileRoute(
   '/leagues/$leagueId/rankings',
 )()
-const EventDataLazyImport = createFileRoute('/eventData')()
-
-const LeaguesLeagueIdRostersLazyImport = createFileRoute(
-  '/leagues/$leagueId/rosters',
-)()
-const LeaguesLeagueIdWaiversLazyImport = createFileRoute(
-  '/leagues/$leagueId/waivers',
+const LeaguesLeagueIdAvailableLazyImport = createFileRoute(
+  '/leagues/$leagueId/available',
 )()
 const DraftsDraftIdScoresLazyImport = createFileRoute(
   '/drafts/$draftId/scores',
@@ -46,21 +46,56 @@ const DraftsDraftIdLeagueWeeksLazyImport = createFileRoute(
 
 // Create/Update Routes
 
+const OffseasonDraftsLazyRoute = OffseasonDraftsLazyImport.update({
+  path: '/offseasonDrafts',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/offseasonDrafts.lazy').then((d) => d.Route),
+)
+
+const EventDataLazyRoute = EventDataLazyImport.update({
+  path: '/eventData',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/eventData.lazy').then((d) => d.Route))
+
 const IndexLazyRoute = IndexLazyImport.update({
   path: '/',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+
+const LeaguesIndexLazyRoute = LeaguesIndexLazyImport.update({
+  path: '/leagues/',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/leagues/index.lazy').then((d) => d.Route))
 
 const LeaguesLeagueIdRoute = LeaguesLeagueIdImport.update({
   path: '/leagues/$leagueId',
   getParentRoute: () => rootRoute,
 } as any)
 
+const LeaguesLeagueIdWaiversLazyRoute = LeaguesLeagueIdWaiversLazyImport.update(
+  {
+    path: '/waivers',
+    getParentRoute: () => LeaguesLeagueIdRoute,
+  } as any,
+).lazy(() =>
+  import('./routes/leagues/$leagueId/waivers.lazy').then((d) => d.Route),
+)
+
 const LeaguesLeagueIdScoresLazyRoute = LeaguesLeagueIdScoresLazyImport.update({
   path: '/scores',
   getParentRoute: () => LeaguesLeagueIdRoute,
 } as any).lazy(() =>
   import('./routes/leagues/$leagueId/scores.lazy').then((d) => d.Route),
+)
+
+const LeaguesLeagueIdRostersLazyRoute = LeaguesLeagueIdRostersLazyImport.update(
+  {
+    path: '/rosters',
+    getParentRoute: () => LeaguesLeagueIdRoute,
+  } as any,
+).lazy(() =>
+  import('./routes/leagues/$leagueId/rosters.lazy').then((d) => d.Route),
 )
 
 const LeaguesLeagueIdRankingsLazyRoute =
@@ -71,47 +106,33 @@ const LeaguesLeagueIdRankingsLazyRoute =
     import('./routes/leagues/$leagueId/rankings.lazy').then((d) => d.Route),
   )
 
-const LeaguesLeagueIdRostersLazyRoute =
-  LeaguesLeagueIdRostersLazyImport.update({
-    path: '/rosters',
+const LeaguesLeagueIdAvailableLazyRoute =
+  LeaguesLeagueIdAvailableLazyImport.update({
+    path: '/available',
     getParentRoute: () => LeaguesLeagueIdRoute,
   } as any).lazy(() =>
-    import('./routes/leagues/$leagueId/rosters.lazy').then((d) => d.Route),
+    import('./routes/leagues/$leagueId/available.lazy').then((d) => d.Route),
   )
 
-const LeaguesLeagueIdWaiversLazyRoute =
-  LeaguesLeagueIdWaiversLazyImport.update({
-    path: '/waivers',
-    getParentRoute: () => LeaguesLeagueIdRoute,
+const DraftsDraftIdScoresLazyRoute = DraftsDraftIdScoresLazyImport.update({
+  path: '/drafts/$draftId/scores',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/drafts/$draftId/scores.lazy').then((d) => d.Route),
+)
+
+const DraftsDraftIdLeagueWeeksLazyRoute =
+  DraftsDraftIdLeagueWeeksLazyImport.update({
+    path: '/drafts/$draftId/leagueWeeks',
+    getParentRoute: () => rootRoute,
   } as any).lazy(() =>
-    import('./routes/leagues/$leagueId/waivers.lazy').then((d) => d.Route),
+    import('./routes/drafts/$draftId/leagueWeeks.lazy').then((d) => d.Route),
   )
 
 const DraftsDraftIdRoute = DraftsDraftIdImport.update({
   path: '/drafts/$draftId',
   getParentRoute: () => rootRoute,
 } as any)
-
-const DraftsDraftIdScoresLazyRoute = DraftsDraftIdScoresLazyImport.update({
-  path: '/scores',
-  getParentRoute: () => DraftsDraftIdRoute,
-} as any).lazy(() =>
-  import('./routes/drafts/$draftId/scores.lazy').then((d) => d.Route),
-)
-
-const DraftsDraftIdLeagueWeeksLazyRoute = DraftsDraftIdLeagueWeeksLazyImport.update({
-  path: '/leagueWeeks',
-  getParentRoute: () => DraftsDraftIdRoute,
-} as any).lazy(() =>
-  import('./routes/drafts/$draftId/leagueWeeks.lazy').then((d) => d.Route),
-)
-
-const EventDataLazyRoute = EventDataLazyImport.update({
-  path: '/eventData',
-  getParentRoute: () => rootRoute,
-} as any).lazy(() =>
-  import('./routes/eventData.lazy').then((d) => d.Route),
-)
 
 // Populate the FileRoutesByPath interface
 
@@ -124,11 +145,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexLazyImport
       parentRoute: typeof rootRoute
     }
+    '/eventData': {
+      id: '/eventData'
+      path: '/eventData'
+      fullPath: '/eventData'
+      preLoaderRoute: typeof EventDataLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/offseasonDrafts': {
+      id: '/offseasonDrafts'
+      path: '/offseasonDrafts'
+      fullPath: '/offseasonDrafts'
+      preLoaderRoute: typeof OffseasonDraftsLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/leagues/$leagueId': {
       id: '/leagues/$leagueId'
       path: '/leagues/$leagueId'
       fullPath: '/leagues/$leagueId'
       preLoaderRoute: typeof LeaguesLeagueIdImport
+      parentRoute: typeof rootRoute
+    }
+    '/leagues/': {
+      id: '/leagues/'
+      path: '/leagues'
+      fullPath: '/leagues'
+      preLoaderRoute: typeof LeaguesIndexLazyImport
       parentRoute: typeof rootRoute
     }
     '/drafts//$draftId': {
@@ -138,25 +180,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DraftsDraftIdImport
       parentRoute: typeof rootRoute
     }
-    '/eventData': {
-      id: '/eventData'
-      path: '/eventData'
-      fullPath: '/eventData'
-      preLoaderRoute: typeof EventDataLazyImport
+    '/drafts/$draftId/leagueWeeks': {
+      id: '/drafts/$draftId/leagueWeeks'
+      path: '/drafts/$draftId/leagueWeeks'
+      fullPath: '/drafts/$draftId/leagueWeeks'
+      preLoaderRoute: typeof DraftsDraftIdLeagueWeeksLazyImport
       parentRoute: typeof rootRoute
+    }
+    '/drafts/$draftId/scores': {
+      id: '/drafts/$draftId/scores'
+      path: '/drafts/$draftId/scores'
+      fullPath: '/drafts/$draftId/scores'
+      preLoaderRoute: typeof DraftsDraftIdScoresLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/leagues/$leagueId/available': {
+      id: '/leagues/$leagueId/available'
+      path: '/available'
+      fullPath: '/leagues/$leagueId/available'
+      preLoaderRoute: typeof LeaguesLeagueIdAvailableLazyImport
+      parentRoute: typeof LeaguesLeagueIdImport
     }
     '/leagues/$leagueId/rankings': {
       id: '/leagues/$leagueId/rankings'
       path: '/rankings'
       fullPath: '/leagues/$leagueId/rankings'
       preLoaderRoute: typeof LeaguesLeagueIdRankingsLazyImport
-      parentRoute: typeof LeaguesLeagueIdImport
-    }
-    '/leagues/$leagueId/scores': {
-      id: '/leagues/$leagueId/scores'
-      path: '/scores'
-      fullPath: '/leagues/$leagueId/scores'
-      preLoaderRoute: typeof LeaguesLeagueIdScoresLazyImport
       parentRoute: typeof LeaguesLeagueIdImport
     }
     '/leagues/$leagueId/rosters': {
@@ -166,6 +215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LeaguesLeagueIdRostersLazyImport
       parentRoute: typeof LeaguesLeagueIdImport
     }
+    '/leagues/$leagueId/scores': {
+      id: '/leagues/$leagueId/scores'
+      path: '/scores'
+      fullPath: '/leagues/$leagueId/scores'
+      preLoaderRoute: typeof LeaguesLeagueIdScoresLazyImport
+      parentRoute: typeof LeaguesLeagueIdImport
+    }
     '/leagues/$leagueId/waivers': {
       id: '/leagues/$leagueId/waivers'
       path: '/waivers'
@@ -173,29 +229,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LeaguesLeagueIdWaiversLazyImport
       parentRoute: typeof LeaguesLeagueIdImport
     }
-    '/drafts/$draftId/leagueWeeks': {
-      id: '/drafts/$draftId/leagueWeeks'
-      path: '/leagueWeeks'
-      fullPath: '/drafts/$draftId/leagueWeeks'
-      preLoaderRoute: typeof DraftsDraftIdLeagueWeeksLazyImport
-      parentRoute: typeof DraftsDraftIdImport
-    }
   }
 }
 
 // Create and export the route tree
 
 interface LeaguesLeagueIdRouteChildren {
+  LeaguesLeagueIdAvailableLazyRoute: typeof LeaguesLeagueIdAvailableLazyRoute
   LeaguesLeagueIdRankingsLazyRoute: typeof LeaguesLeagueIdRankingsLazyRoute
-  LeaguesLeagueIdScoresLazyRoute: typeof LeaguesLeagueIdScoresLazyRoute
   LeaguesLeagueIdRostersLazyRoute: typeof LeaguesLeagueIdRostersLazyRoute
+  LeaguesLeagueIdScoresLazyRoute: typeof LeaguesLeagueIdScoresLazyRoute
   LeaguesLeagueIdWaiversLazyRoute: typeof LeaguesLeagueIdWaiversLazyRoute
 }
 
 const LeaguesLeagueIdRouteChildren: LeaguesLeagueIdRouteChildren = {
+  LeaguesLeagueIdAvailableLazyRoute: LeaguesLeagueIdAvailableLazyRoute,
   LeaguesLeagueIdRankingsLazyRoute: LeaguesLeagueIdRankingsLazyRoute,
-  LeaguesLeagueIdScoresLazyRoute: LeaguesLeagueIdScoresLazyRoute,
   LeaguesLeagueIdRostersLazyRoute: LeaguesLeagueIdRostersLazyRoute,
+  LeaguesLeagueIdScoresLazyRoute: LeaguesLeagueIdScoresLazyRoute,
   LeaguesLeagueIdWaiversLazyRoute: LeaguesLeagueIdWaiversLazyRoute,
 }
 
@@ -203,55 +254,52 @@ const LeaguesLeagueIdRouteWithChildren = LeaguesLeagueIdRoute._addFileChildren(
   LeaguesLeagueIdRouteChildren,
 )
 
-interface DraftsDraftIdRouteChildren {
-  DraftsDraftIdScoresLazyRoute: typeof DraftsDraftIdScoresLazyRoute
-  DraftsDraftIdLeagueWeeksLazyRoute: typeof DraftsDraftIdLeagueWeeksLazyRoute
-}
-
-const DraftsDraftIdRouteChildren: DraftsDraftIdRouteChildren = {
-  DraftsDraftIdScoresLazyRoute: DraftsDraftIdScoresLazyRoute,
-  DraftsDraftIdLeagueWeeksLazyRoute: DraftsDraftIdLeagueWeeksLazyRoute,
-}
-
-const DraftsDraftIdRouteWithChildren = DraftsDraftIdRoute._addFileChildren(
-  DraftsDraftIdRouteChildren,
-)
-
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
-  '/leagues/$leagueId': typeof LeaguesLeagueIdRouteWithChildren
-  '/drafts/$draftId': typeof DraftsDraftIdRouteWithChildren
   '/eventData': typeof EventDataLazyRoute
-  '/leagues/$leagueId/rankings': typeof LeaguesLeagueIdRankingsLazyRoute
-  '/leagues/$leagueId/scores': typeof LeaguesLeagueIdScoresLazyRoute
-  '/leagues/$leagueId/rosters': typeof LeaguesLeagueIdRostersLazyRoute
-  '/leagues/$leagueId/waivers': typeof LeaguesLeagueIdWaiversLazyRoute
+  '/offseasonDrafts': typeof OffseasonDraftsLazyRoute
+  '/leagues/$leagueId': typeof LeaguesLeagueIdRouteWithChildren
+  '/leagues': typeof LeaguesIndexLazyRoute
+  '/drafts/$draftId': typeof DraftsDraftIdRoute
   '/drafts/$draftId/leagueWeeks': typeof DraftsDraftIdLeagueWeeksLazyRoute
+  '/drafts/$draftId/scores': typeof DraftsDraftIdScoresLazyRoute
+  '/leagues/$leagueId/available': typeof LeaguesLeagueIdAvailableLazyRoute
+  '/leagues/$leagueId/rankings': typeof LeaguesLeagueIdRankingsLazyRoute
+  '/leagues/$leagueId/rosters': typeof LeaguesLeagueIdRostersLazyRoute
+  '/leagues/$leagueId/scores': typeof LeaguesLeagueIdScoresLazyRoute
+  '/leagues/$leagueId/waivers': typeof LeaguesLeagueIdWaiversLazyRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
-  '/leagues/$leagueId': typeof LeaguesLeagueIdRouteWithChildren
-  '/drafts/$draftId': typeof DraftsDraftIdRouteWithChildren
   '/eventData': typeof EventDataLazyRoute
-  '/leagues/$leagueId/rankings': typeof LeaguesLeagueIdRankingsLazyRoute
-  '/leagues/$leagueId/scores': typeof LeaguesLeagueIdScoresLazyRoute
-  '/leagues/$leagueId/rosters': typeof LeaguesLeagueIdRostersLazyRoute
-  '/leagues/$leagueId/waivers': typeof LeaguesLeagueIdWaiversLazyRoute
+  '/offseasonDrafts': typeof OffseasonDraftsLazyRoute
+  '/leagues/$leagueId': typeof LeaguesLeagueIdRouteWithChildren
+  '/leagues': typeof LeaguesIndexLazyRoute
+  '/drafts/$draftId': typeof DraftsDraftIdRoute
   '/drafts/$draftId/leagueWeeks': typeof DraftsDraftIdLeagueWeeksLazyRoute
+  '/drafts/$draftId/scores': typeof DraftsDraftIdScoresLazyRoute
+  '/leagues/$leagueId/available': typeof LeaguesLeagueIdAvailableLazyRoute
+  '/leagues/$leagueId/rankings': typeof LeaguesLeagueIdRankingsLazyRoute
+  '/leagues/$leagueId/rosters': typeof LeaguesLeagueIdRostersLazyRoute
+  '/leagues/$leagueId/scores': typeof LeaguesLeagueIdScoresLazyRoute
+  '/leagues/$leagueId/waivers': typeof LeaguesLeagueIdWaiversLazyRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexLazyRoute
-  '/leagues/$leagueId': typeof LeaguesLeagueIdRouteWithChildren
-  '/drafts//$draftId': typeof DraftsDraftIdRouteWithChildren
-  '/drafts/$draftId/scores': typeof DraftsDraftIdScoresLazyRoute
-  '/drafts/$draftId/leagueWeeks': typeof DraftsDraftIdLeagueWeeksLazyRoute
   '/eventData': typeof EventDataLazyRoute
+  '/offseasonDrafts': typeof OffseasonDraftsLazyRoute
+  '/leagues/$leagueId': typeof LeaguesLeagueIdRouteWithChildren
+  '/leagues/': typeof LeaguesIndexLazyRoute
+  '/drafts//$draftId': typeof DraftsDraftIdRoute
+  '/drafts/$draftId/leagueWeeks': typeof DraftsDraftIdLeagueWeeksLazyRoute
+  '/drafts/$draftId/scores': typeof DraftsDraftIdScoresLazyRoute
+  '/leagues/$leagueId/available': typeof LeaguesLeagueIdAvailableLazyRoute
   '/leagues/$leagueId/rankings': typeof LeaguesLeagueIdRankingsLazyRoute
-  '/leagues/$leagueId/scores': typeof LeaguesLeagueIdScoresLazyRoute
   '/leagues/$leagueId/rosters': typeof LeaguesLeagueIdRostersLazyRoute
+  '/leagues/$leagueId/scores': typeof LeaguesLeagueIdScoresLazyRoute
   '/leagues/$leagueId/waivers': typeof LeaguesLeagueIdWaiversLazyRoute
 }
 
@@ -259,54 +307,71 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/leagues/$leagueId'
-    | '/drafts/$draftId'
-    | '/drafts/$draftId/scores'
-    | '/drafts/$draftId/leagueWeeks'
     | '/eventData'
+    | '/offseasonDrafts'
+    | '/leagues/$leagueId'
+    | '/leagues'
+    | '/drafts/$draftId'
+    | '/drafts/$draftId/leagueWeeks'
+    | '/drafts/$draftId/scores'
+    | '/leagues/$leagueId/available'
     | '/leagues/$leagueId/rankings'
-    | '/leagues/$leagueId/scores'
     | '/leagues/$leagueId/rosters'
+    | '/leagues/$leagueId/scores'
     | '/leagues/$leagueId/waivers'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/' 
-    | '/leagues/$leagueId'
-    | '/drafts/$draftId'
-    | '/drafts/$draftId/scores'
-    | '/drafts/$draftId/leagueWeeks'
+    | '/'
     | '/eventData'
+    | '/offseasonDrafts'
+    | '/leagues/$leagueId'
+    | '/leagues'
+    | '/drafts/$draftId'
+    | '/drafts/$draftId/leagueWeeks'
+    | '/drafts/$draftId/scores'
+    | '/leagues/$leagueId/available'
     | '/leagues/$leagueId/rankings'
-    | '/leagues/$leagueId/scores'
     | '/leagues/$leagueId/rosters'
+    | '/leagues/$leagueId/scores'
     | '/leagues/$leagueId/waivers'
   id:
     | '__root__'
-    | '/' 
-    | '/leagues/$leagueId'
-    | '/drafts//$draftId'
-    | '/drafts/$draftId/scores'
-    | '/drafts/$draftId/leagueWeeks'
+    | '/'
     | '/eventData'
+    | '/offseasonDrafts'
+    | '/leagues/$leagueId'
+    | '/leagues/'
+    | '/drafts//$draftId'
+    | '/drafts/$draftId/leagueWeeks'
+    | '/drafts/$draftId/scores'
+    | '/leagues/$leagueId/available'
     | '/leagues/$leagueId/rankings'
-    | '/leagues/$leagueId/scores'
     | '/leagues/$leagueId/rosters'
+    | '/leagues/$leagueId/scores'
     | '/leagues/$leagueId/waivers'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
-  LeaguesLeagueIdRoute: typeof LeaguesLeagueIdRouteWithChildren
-  DraftsDraftIdRoute: typeof DraftsDraftIdRouteWithChildren
   EventDataLazyRoute: typeof EventDataLazyRoute
+  OffseasonDraftsLazyRoute: typeof OffseasonDraftsLazyRoute
+  LeaguesLeagueIdRoute: typeof LeaguesLeagueIdRouteWithChildren
+  LeaguesIndexLazyRoute: typeof LeaguesIndexLazyRoute
+  DraftsDraftIdRoute: typeof DraftsDraftIdRoute
+  DraftsDraftIdLeagueWeeksLazyRoute: typeof DraftsDraftIdLeagueWeeksLazyRoute
+  DraftsDraftIdScoresLazyRoute: typeof DraftsDraftIdScoresLazyRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
-  LeaguesLeagueIdRoute: LeaguesLeagueIdRouteWithChildren,
-  DraftsDraftIdRoute: DraftsDraftIdRouteWithChildren,
   EventDataLazyRoute: EventDataLazyRoute,
+  OffseasonDraftsLazyRoute: OffseasonDraftsLazyRoute,
+  LeaguesLeagueIdRoute: LeaguesLeagueIdRouteWithChildren,
+  LeaguesIndexLazyRoute: LeaguesIndexLazyRoute,
+  DraftsDraftIdRoute: DraftsDraftIdRoute,
+  DraftsDraftIdLeagueWeeksLazyRoute: DraftsDraftIdLeagueWeeksLazyRoute,
+  DraftsDraftIdScoresLazyRoute: DraftsDraftIdScoresLazyRoute,
 }
 
 export const routeTree = rootRoute
@@ -322,58 +387,65 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
+        "/eventData",
+        "/offseasonDrafts",
         "/leagues/$leagueId",
+        "/leagues/",
         "/drafts//$draftId",
-        "/drafts/$draftId/scores",
         "/drafts/$draftId/leagueWeeks",
-        "/eventData"
+        "/drafts/$draftId/scores"
       ]
     },
     "/": {
       "filePath": "index.lazy.tsx"
     },
-    "/leagues/$leagueId": {
-      "filePath": "leagues/$leagueId.tsx",
-      "children": [
-        "/leagues/$leagueId/rankings",
-        "/leagues/$leagueId/scores",
-        "/leagues/$leagueId/rosters",
-        "/leagues/$leagueId/waivers"
-      ]
-    },
-    "/drafts//$draftId": {
-      "filePath": "drafts/_.$draftId.tsx",
-      "children": [
-        "/drafts/$draftId/scores",
-        "/drafts/$draftId/leagueWeeks"
-      ]
-    },
     "/eventData": {
       "filePath": "eventData.lazy.tsx"
     },
-    "/leagues/$leagueId/rankings": {
-      "filePath": "leagues/$leagueId/rankings.lazy.tsx",
+    "/offseasonDrafts": {
+      "filePath": "offseasonDrafts.lazy.tsx"
+    },
+    "/leagues/$leagueId": {
+      "filePath": "leagues/$leagueId.tsx",
+      "children": [
+        "/leagues/$leagueId/available",
+        "/leagues/$leagueId/rankings",
+        "/leagues/$leagueId/rosters",
+        "/leagues/$leagueId/scores",
+        "/leagues/$leagueId/waivers"
+      ]
+    },
+    "/leagues/": {
+      "filePath": "leagues/index.lazy.tsx"
+    },
+    "/drafts//$draftId": {
+      "filePath": "drafts/_.$draftId.tsx"
+    },
+    "/drafts/$draftId/leagueWeeks": {
+      "filePath": "drafts/$draftId/leagueWeeks.lazy.tsx"
+    },
+    "/drafts/$draftId/scores": {
+      "filePath": "drafts/$draftId/scores.lazy.tsx"
+    },
+    "/leagues/$leagueId/available": {
+      "filePath": "leagues/$leagueId/available.lazy.tsx",
       "parent": "/leagues/$leagueId"
     },
-    "/leagues/$leagueId/scores": {
-      "filePath": "leagues/$leagueId/scores.lazy.tsx",
+    "/leagues/$leagueId/rankings": {
+      "filePath": "leagues/$leagueId/rankings.lazy.tsx",
       "parent": "/leagues/$leagueId"
     },
     "/leagues/$leagueId/rosters": {
       "filePath": "leagues/$leagueId/rosters.lazy.tsx",
       "parent": "/leagues/$leagueId"
     },
+    "/leagues/$leagueId/scores": {
+      "filePath": "leagues/$leagueId/scores.lazy.tsx",
+      "parent": "/leagues/$leagueId"
+    },
     "/leagues/$leagueId/waivers": {
       "filePath": "leagues/$leagueId/waivers.lazy.tsx",
       "parent": "/leagues/$leagueId"
-    },
-    "/drafts/$draftId/scores": {
-      "filePath": "drafts/$draftId/scores.lazy.tsx",
-      "parent": "/drafts//$draftId"
-    },
-    "/drafts/$draftId/leagueWeeks": {
-      "filePath": "drafts/$draftId/leagueWeeks.lazy.tsx",
-      "parent": "/drafts//$draftId"
     }
   }
 }
