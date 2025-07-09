@@ -141,7 +141,14 @@ const DraftBoard = () => {
 
   return (
     <div className="w-full min-w-[1000px] overflow-x-scroll overflow-y-scroll">
-      <h1 className="text-3xl font-bold text-center">{league.data?.league_name}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-center flex-1">{league.data?.league_name}</h1>
+        {league.data && !league.data.offseason && (
+          <Link to="/leagues/$leagueId" params={{ leagueId: league.data.league_id.toString() }}>
+            <Button variant="outline">Back to League</Button>
+          </Link>
+        )}
+      </div>
       {league.data.offseason && (
         <div className="text-center my-4">
           <Link to="/drafts/$draftId/scores" params={{ draftId }}>
