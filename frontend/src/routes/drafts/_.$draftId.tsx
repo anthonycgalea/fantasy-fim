@@ -80,79 +80,47 @@ const DraftBoard = () => {
 
     const weeks = [1, 2, 3, 4, 5]
 
-    const teamEventsByWeek = availableTeams.data
-      .map((team, idx) => {
-        const events = weeks.map((week) => {
-          const event = team.events.find((e) => e.week === week)
-          return event ? event.event_key : ''
-        })
-        return {
-          teamNumber: team.team_number,
-          teamName: team.name,
-          events,
-          epa: teamEpas[idx]?.data ?? null,
-          yearEndEpa: team.year_end_epa,
-        }
-      })
+    const teams = availableTeams.data
+      .map((team, idx) => ({
+        teamNumber: team.team_number,
+        teamName: team.name,
+        events: team.events,
+        epa: teamEpas[idx]?.data ?? null,
+      }))
       .sort((a, b) => (b.epa ?? -Infinity) - (a.epa ?? -Infinity))
 
-    let filteredTeams
-    if (league.data.is_fim) {
-      filteredTeams = teamEventsByWeek.filter(({ events }) =>
-        selectedWeeks.some((week) => events[week - 1] !== ''),
-      )
-    } else {
-      filteredTeams = teamEventsByWeek
-    }
+    const filteredTeams = league.data.is_fim
+      ? teams.filter(({ events }) =>
+          events.some((e) => selectedWeeks.includes(e.week)),
+        )
+      : teams
 
     return (
-      <table className="table-auto w-full border-collapse my-4 text-sm">
-        <thead>
-          <tr>
-            <th rowSpan={2} className="border px-2 py-1">
-              Team #
-            </th>
-            <th rowSpan={2} className="border px-2 py-1">
-              Team Name
-            </th>
-            {league.data.is_fim && <th colSpan={5}>Week</th>}
-            <th rowSpan={2} className="border px-2 py-1">
-              {league.data.is_fim ? prevYear : league.data.year} EPA
-            </th>
-          </tr>
-          {league.data.is_fim && (
-            <tr>
-              {weeks.map((week) => (
-                <th key={week} className="border px-2 py-1">
-                  <label className="flex items-center justify-between gap-2">
-                    <span>{week}</span>
-                    <input
-                      type="checkbox"
-                      checked={selectedWeeks.includes(week)}
-                      onChange={() => toggleWeekSelection(week)}
-                    />
-                  </label>
-                </th>
-              ))}
-            </tr>
-          )}
-        </thead>
-        <tbody>
-          {filteredTeams.map(({ teamNumber, teamName, events }) => (
-            <tr key={teamNumber}>
-              <td className="border px-2 py-1">{teamNumber}</td>
-              <td className="border px-2 py-1">{teamName}</td>
-              {league.data?.is_fim &&
-                events.map((event, index) => (
-                  <td key={index} className="border px-2 py-1">
-                    {event}
-                  </td>
-                ))}
-              <td className="border px-2 py-1"><TeamEPA teamNumber={teamNumber} year={epaYear} /></td>
-            </tr>
+      <div className="my-4">
+        {league.data.is_fim && (
+          <div className="flex gap-2 mb-2">
+            {weeks.map((week) => (
+              <label key={week} className="flex items-center gap-2">
+                <span>{week}</span>
+                <input
+                  type="checkbox"
+                  checked={selectedWeeks.includes(week)}
+                  onChange={() => toggleWeekSelection(week)}
+                />
+              </label>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {filteredTeams.map((team) => (
+            <AvailableTeamCard
+              key={team.teamNumber}
+              team={team}
+              year={epaYear}
+            />
           ))}
-        </tbody>
-      </table>
+        </div>
+      </div>
     )
   }
 
@@ -254,6 +222,10 @@ const DraftBoardCard = ({
   year: number
 }) => {
   const teamAvatar = useTeamAvatar(team?.team_picked, year)
+  const { data: epa } = useStatboticsTeamYear(
+    team?.team_picked ? Number(team.team_picked) : undefined,
+    year,
+  )
   return (
     <a
       data-round={pick.round}
@@ -278,7 +250,40 @@ const DraftBoardCard = ({
             .join(', ')
           : ''}
       </p>
+      <p className="text-sm">EPA: {epa ?? 'N/A'}</p>
 
+      {teamAvatar.data?.image && (
+        <img
+          src={`data:image/png;base64,${teamAvatar.data.image}`}
+          className="aspect-square h-50% absolute bottom-0 right-0 rounded"
+        />
+      )}
+    </a>
+  )
+}
+
+const AvailableTeamCard = ({
+  team,
+  year,
+}: {
+  team: { teamNumber: number; teamName: string; events: { week: number }[]; epa: number | null }
+  year: number
+}) => {
+  const teamAvatar = useTeamAvatar(team.teamNumber.toString(), year)
+  const weeks = team.events
+    .filter((e) => e.week !== 99)
+    .sort((a, b) => a.week - b.week)
+    .map((e) => e.week)
+    .join(', ')
+  return (
+    <a
+      href={`https://www.thebluealliance.com/team/${team.teamNumber}/${year}`}
+      target="_blank"
+      className="p-2 border rounded-xl h-16 flex flex-col relative bg-slate-700 hover:bg-slate-800 cursor-pointer text-start"
+    >
+      <p className="text-xl font-bold">{team.teamNumber}</p>
+      {weeks && <p className="text-sm">{weeks}</p>}
+      <p className="text-sm">EPA: {team.epa ?? 'N/A'}</p>
       {teamAvatar.data?.image && (
         <img
           src={`data:image/png;base64,${teamAvatar.data.image}`}
