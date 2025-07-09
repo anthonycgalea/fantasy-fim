@@ -95,7 +95,13 @@ class Admin(commands.Cog):
       return
     session = await self.bot.get_session()
     i = 0
-    session.query(StatboticsData).filter(StatboticsData.year==year).delete()
+    deleted_count = (
+        session.query(StatboticsData)
+        .filter(StatboticsData.year == year)
+        .delete()
+    )
+    session.commit()
+    logger.info(f"Deleted {deleted_count} Statbotics records for {year}")
 
     offset = 0
     while True:
