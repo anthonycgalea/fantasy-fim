@@ -167,13 +167,23 @@ def get_league(leagueId):
               is_fim:
                 type: bool
                 example: True
+              offseason:
+                type: bool
+                example: False
       500:
         description: Internal server error.
     """
     session = Session()
     league = session.query(League).filter(League.active==True, League.league_id==leagueId).first()
     session.close()
-    return jsonify({"league_id": league.league_id, "league_name": league.league_name, "weekly_starts": league.team_starts, "year": league.year, "is_fim": league.is_fim} )
+    return jsonify({
+        "league_id": league.league_id,
+        "league_name": league.league_name,
+        "weekly_starts": league.team_starts,
+        "year": league.year,
+        "is_fim": league.is_fim,
+        "offseason": league.offseason,
+    })
 
 @app.route('/api/leagues/<int:leagueId>/fantasyTeams', methods=['GET'])
 def get_fantasy_teams(leagueId):
