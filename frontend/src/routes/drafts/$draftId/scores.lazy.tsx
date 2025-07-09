@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import React from "react";
 
 export const DraftScoresPage = () => {
   const { draftId } = Route.useParams();
@@ -35,7 +34,11 @@ export const DraftScoresPage = () => {
         </h1>
       </div>
       <div className="text-center my-4">
-        <Link to="/drafts/$draftId" params={{ draftId }}>
+        <Link
+          to="/drafts/$draftId"
+          params={{ draftId }}
+          search={{ autoRefreshInterval: false }}
+        >
           <Button>View Draft</Button>
         </Link>
       </div>

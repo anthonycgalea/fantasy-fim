@@ -23,6 +23,6 @@ export const useStatboticsTeamYears = (
       enabled: !!team && !!year,
       queryFn: () => fetchTeamYearEPA(team, year as number),
       staleTime: 1000 * 60 * 60 * 24,
-      cacheTime: 1000 * 60 * 60 * 24,
+      gcTime: 1000 * 60 * 60 * 24,
     })),
   });

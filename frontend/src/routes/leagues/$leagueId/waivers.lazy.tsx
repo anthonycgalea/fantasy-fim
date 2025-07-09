@@ -3,7 +3,7 @@ import { useLeague } from "@/api/useLeague";
 import { useWaiverTeams } from "@/api/useWaiverTeams";
 import { useWaiverPriority } from "@/api/useWaiverPriority";
 import { WaiverPriority } from "@/types/WaiverPriority";
-import React, { useState } from "react";
+import { useState } from "react";
 import { useTeamAvatar } from "@/api/useTeamAvatar";
 import {
   Table,

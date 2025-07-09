@@ -14,6 +14,7 @@ const OffseasonDraftLinks = ({ league }: { league: League }) => {
           <Link
             to="/drafts/$draftId"
             params={{ draftId: draft.draft_id.toString() }}
+            search={{ autoRefreshInterval: false }}
             className="block px-2 py-1 hover:underline"
           >
             {league.league_name}: {draft.event_key}
