@@ -2,7 +2,7 @@ import discord, sqlalchemy
 from discord import app_commands
 from discord import Embed
 from discord.ext import commands
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, or_
 from sqlalchemy.sql import text
 import requests
 import logging
@@ -550,10 +550,13 @@ class Admin(commands.Cog):
 
             for start in teamstarts:
                 if states:
-                    # States Week: Count all points across all events the team competes in
+                    # States Week: Count all points across all events the team competes in,
+                    # including the Michigan Championship event
                     team_scores = session.query(TeamScore).join(FRCEvent).filter(
                         TeamScore.team_key == start.team_number
-                    ).filter(FRCEvent.year == year).filter(FRCEvent.week == week).all()
+                    ).filter(FRCEvent.year == year).filter(
+                        or_(FRCEvent.week == week, FRCEvent.event_key == f"{year}micmp")
+                    ).all()
                 else:
                     # Pre-States: Only include points for the specific event in TeamStarted
                     team_scores = session.query(TeamScore).filter(
