@@ -3,6 +3,8 @@ import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import Navbar from "@/components/Navbar";
 
+const showDevtools = import.meta.env.DEV;
+
 export const Route = createRootRoute({
   component: () => (
     <>
@@ -10,8 +12,8 @@ export const Route = createRootRoute({
         <Navbar />
         <Outlet />
       </div>
-      <TanStackRouterDevtools />
-      <ReactQueryDevtools initialIsOpen={false} />
+      {showDevtools && <TanStackRouterDevtools />}
+      {showDevtools && <ReactQueryDevtools initialIsOpen={false} />}
     </>
   ),
 });
