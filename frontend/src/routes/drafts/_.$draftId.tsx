@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useDraft } from '@/api/useDraft'
 import { useLeague } from '@/api/useLeague'
 import { usePicks } from '@/api/usePicks'
@@ -8,6 +8,7 @@ import { useFantasyTeams } from '@/api/useFantasyTeams'
 import { useMemo, useState } from 'react'
 import { useTeamAvatar } from '@/api/useTeamAvatar'
 import { useAvailableTeams } from '@/api/useAvailableTeams'
+import { Button } from '@/components/ui/button'
 
 const DraftBoard = () => {
   const { draftId } = Route.useParams()
@@ -140,7 +141,14 @@ const DraftBoard = () => {
 
   return (
     <div className="w-full min-w-[1000px] overflow-x-scroll overflow-y-scroll">
-      <h1 className="text-3xl font-bold text-center">{league.data?.league_name}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-center flex-1">{league.data?.league_name}</h1>
+        {league.data && !league.data.offseason && (
+          <Link to="/leagues/$leagueId" params={{ leagueId: league.data.league_id.toString() }}>
+            <Button variant="outline">Back to League</Button>
+          </Link>
+        )}
+      </div>
 
       <div
         className={`grid`}

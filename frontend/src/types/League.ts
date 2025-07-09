@@ -3,5 +3,5 @@ export type League = {
     league_id: number;
     league_name: string;
     weekly_starts: number;
-    year: number;
-}
+    offseason: boolean;
+    year: number;}
