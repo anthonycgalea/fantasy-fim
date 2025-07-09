@@ -1,14 +1,14 @@
-import { createLazyFileRoute, Link } from "@tanstack/react-router";
-import { useLeagues } from "@/api/useLeagues";
+import { createLazyFileRoute, Link } from '@tanstack/react-router'
+import { useLeagues } from '@/api/useLeagues'
 
 export const LeaguesPage = () => {
-  const leagues = useLeagues();
+  const leagues = useLeagues()
 
   if (leagues.isLoading) {
-    return <div>Loading...</div>;
+    return <div>Loading...</div>
   }
 
-  const fimLeagues = leagues.data?.filter((l) => l.is_fim) ?? [];
+  const fimLeagues = leagues.data?.filter((l) => l.is_fim) ?? []
 
   return (
     <div className="space-y-2">
@@ -27,9 +27,9 @@ export const LeaguesPage = () => {
         ))}
       </ul>
     </div>
-  );
-};
+  )
+}
 
-export const Route = createLazyFileRoute("/leagues")({
+export const Route = createLazyFileRoute('/leagues/')({
   component: LeaguesPage,
-});
+})
