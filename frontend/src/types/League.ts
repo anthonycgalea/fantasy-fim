@@ -1,7 +1,10 @@
-export type League = {
-    is_fim: boolean;
-    league_id: number;
-    league_name: string;
-    weekly_starts: number;
-    year: number;
-}
+export type League = {  league_id: number;
+  league_name: string;
+  year: number;
+  is_fim: boolean;
+  offseason: boolean;
+  team_limit: number;
+  team_starts: number;
+  team_size_limit: number;
+  weekly_starts?: number;
+};

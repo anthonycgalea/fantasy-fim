@@ -15,6 +15,16 @@ export const Navbar = () => {
           </Link>
         </li>
         <li>
+          <Link to="/leagues" className="hover:underline">
+            Leagues
+          </Link>
+        </li>
+        <li>
+          <Link to="/offseasonDrafts" className="hover:underline">
+            Offseason Drafts
+          </Link>
+        </li>
+        <li>
           <a href="/apidocs" className="hover:underline">
             API
           </a>
@@ -33,5 +43,4 @@ export const Navbar = () => {
     </nav>
   );
 };
-
 export default Navbar;
