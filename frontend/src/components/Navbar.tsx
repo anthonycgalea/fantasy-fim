@@ -67,7 +67,7 @@ export const Navbar = () => {
           )}
         </li>
         <li>
-          <a href="/apidocs" className="hover:underline">
+          <a href="/api/apidocs" className="hover:underline">
             API
           </a>
         </li>
