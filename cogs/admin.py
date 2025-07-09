@@ -22,7 +22,7 @@ logger = logging.getLogger('discord')
 TBA_API_ENDPOINT = "https://www.thebluealliance.com/api/v3/"
 TBA_AUTH_KEY = os.getenv("TBA_API_KEY")
 FORUM_CHANNEL_ID = os.getenv("DRAFT_FORUM_ID")
-STATBOTICS_ENDPOINT = "https://api.statbotics.io/v3/team_year/"
+STATBOTICS_ENDPOINT = "https://api.statbotics.io/v3/team_years"
 
 
 class Admin(commands.Cog):
@@ -94,27 +94,51 @@ class Admin(commands.Cog):
       await message.edit(embed=embed)
       return
     session = await self.bot.get_session()
-    teams = session.query(Team).filter(Team.rookie_year <= year).all()
     i = 0
-    session.query(StatboticsData).filter(StatboticsData.year==year).delete()
-    teamcount = len(teams)
-    for team in teams:
+    deleted_count = (
+        session.query(StatboticsData)
+        .filter(StatboticsData.year == year)
+        .delete()
+    )
+    session.commit()
+    logger.info(f"Deleted {deleted_count} Statbotics records for {year}")
+
+    offset = 0
+    while True:
       try:
-        requestURL = STATBOTICS_ENDPOINT+f"{team.team_number}/{year}"
+        requestURL = f"{STATBOTICS_ENDPOINT}?year={year}&limit=500&offset={offset}"
         response = requests.get(requestURL)
-        if response.status_code == 500:
-          pass
-        responsejson = response.json()
-        unitlessEPA = int(responsejson["epa"]["unitless"])
-        logger.info(f"Team number: {team.team_number} Year: {year} year_end_epa: {unitlessEPA}")
-        session.add(StatboticsData(team_number=team.team_number, year=year, year_end_epa=unitlessEPA))
+        if response.status_code != 200:
+          break
+        data = response.json()
+        if not data:
+          break
+        for team_year in data:
+          team_number = str(team_year.get("team"))
+          unitless_epa = team_year.get("unitless_epa_end")
+          if unitless_epa is None:
+            epa_end = team_year.get("epa_end")
+            if isinstance(epa_end, dict):
+              unitless_epa = epa_end.get("unitless")
+            elif isinstance(epa_end, (int, float)):
+              unitless_epa = epa_end
+          if unitless_epa is None:
+            epa = team_year.get("epa")
+            if isinstance(epa, dict):
+              unitless_epa = epa.get("unitless")
+          if unitless_epa is None:
+            unitless_epa = 0
+          logger.info(f"Team number: {team_number} Year: {year} year_end_epa: {int(unitless_epa)}")
+          session.add(StatboticsData(team_number=team_number, year=year, year_end_epa=int(unitless_epa)))
         session.commit()
+        i += len(data)
+        offset += 500
+        if i % 50 == 0:
+          embed.description=f"Processed {i} Teams"
+          await message.edit(embed=embed)
       except Exception:
         logger.error(traceback.format_exc())
-      i+=1
-      if (i%50==0):
-        embed.description=f"Processed {i}/{teamcount} Teams"
-        await message.edit(embed=embed)
+        break
     session.close()
 
   async def updateTeamsTask(self, interaction, startPage):
