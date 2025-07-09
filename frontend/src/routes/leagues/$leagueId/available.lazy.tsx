@@ -56,13 +56,14 @@ export const AvailableTeamsPage = () => {
   if (league.isLoading || availableTeams.isLoading) return <div>Loading...</div>;
 
   const weeks = [1, 2, 3, 4, 5];
+  const epas = teamEpas.data ?? {};
   const teams =
     availableTeams.data
-      ?.map((team, idx) => ({
+      ?.map((team) => ({
         teamNumber: team.team_number,
         teamName: team.name,
         events: team.events,
-        epa: teamEpas[idx]?.data ?? null,
+        epa: epas[team.team_number] ?? null,
       }))
       .sort((a, b) => (b.epa ?? -Infinity) - (a.epa ?? -Infinity)) ?? [];
 

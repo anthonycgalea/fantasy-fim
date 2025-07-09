@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, abort
+from flask import Flask, jsonify, abort, request
 from flask_cors import CORS
 from flask_caching import Cache
 from flasgger import Swagger
@@ -1587,6 +1587,29 @@ def get_team_avatar(team_number, year):
       return jsonify({"team_number": team_number, "image": avatarImage["details"]["base64Image"]})
     except:
       return jsonify({"team_number": team_number, "image": None})
+
+# New endpoint to fetch cached EPA values for multiple teams
+@app.route('/api/epa', methods=['GET'])
+def get_team_epas():
+    """Return cached EPA values for the specified teams and year."""
+    teams_param = request.args.get('teams')
+    year = request.args.get('year', type=int)
+
+    if not teams_param or year is None:
+        return jsonify({"error": "teams and year parameters are required"}), 400
+
+    teams = [t.strip() for t in teams_param.split(',') if t.strip()]
+
+    with Session() as session:
+        query = (
+            session.query(StatboticsData.team_number, StatboticsData.year_end_epa)
+            .filter(StatboticsData.year == year, StatboticsData.team_number.in_(teams))
+        )
+        results = {row.team_number: row.year_end_epa for row in query.all()}
+
+    # Ensure all requested teams are present in the response
+    epa_map = {team: results.get(team) for team in teams}
+    return jsonify(epa_map)
 
 @app.route('/api/fimeventdata', methods=['GET'])
 def get_fim_event_data():

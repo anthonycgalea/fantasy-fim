@@ -1,28 +1,24 @@
-import { useQueries } from "@tanstack/react-query";
-
-const fetchTeamYearEPA = async (team: number | string, year: number) => {
-  const response = await fetch(
-    `https://api.statbotics.io/v3/team_year/${team}/${year}`,
-  );
-  if (!response.ok) return null;
-  try {
-    const data = await response.json();
-    return typeof data?.epa?.unitless === "number" ? data.epa.unitless : null;
-  } catch {
-    return null;
-  }
-};
+import { useQuery } from "@tanstack/react-query";
 
 export const useStatboticsTeamYears = (
   teams: (number | string)[],
   year: number | undefined,
 ) =>
-  useQueries({
-    queries: teams.map((team) => ({
-      queryKey: ["statbotics-team-year", team, year],
-      enabled: !!team && !!year,
-      queryFn: () => fetchTeamYearEPA(team, year as number),
-      staleTime: 1000 * 60 * 60 * 24,
-      gcTime: 1000 * 60 * 60 * 24,
-    })),
+  useQuery<Record<string, number | null>>({
+    queryKey: ["statbotics-team-years", teams, year],
+    enabled: teams.length > 0 && !!year,
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/epa?teams=${teams.join(",")}&year=${year}`,
+      );
+      if (!response.ok) return {};
+      try {
+        const data = await response.json();
+        return data as Record<string, number | null>;
+      } catch {
+        return {};
+      }
+    },
+    staleTime: 1000 * 60 * 60 * 24,
+    gcTime: 1000 * 60 * 60 * 24,
   });
