@@ -1,6 +1,7 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useLeague } from "@/api/useLeague";
 import { useLeagueAvailableTeams } from "@/api/useLeagueAvailableTeams";
+import { useStatboticsTeamYears } from "@/api/useStatboticsTeamYears";
 import React from "react";
 import {
   Table,
@@ -15,6 +16,10 @@ export const AvailableTeamsPage = () => {
   const { leagueId } = Route.useParams();
   const league = useLeague(leagueId);
   const availableTeams = useLeagueAvailableTeams(leagueId);
+  const prevYear = (league.data?.year ?? 0) - 1;
+  const epaYear = league.data?.offseason ? league.data?.year : prevYear;
+  const teamNumbers = availableTeams.data?.map((t) => t.team_number) ?? [];
+  const teamEpas = useStatboticsTeamYears(teamNumbers, epaYear);
   const [selectedWeeks, setSelectedWeeks] = React.useState<number[]>([1, 2, 3, 4, 5]);
 
   const toggleWeekSelection = (week: number) =>
@@ -26,26 +31,26 @@ export const AvailableTeamsPage = () => {
 
   const weeks = [1, 2, 3, 4, 5];
   const teamEventsByWeek =
-    availableTeams.data?.map((team) => {
-      const events = weeks.map((w) => {
-        const ev = team.events.find((e) => e.week === w);
-        return ev ? ev.event_key : "";
-      });
-      return {
-        teamNumber: team.team_number,
-        teamName: team.name,
-        events,
-        yearEndEpa: team.year_end_epa,
-      };
-    }) ?? [];
+    availableTeams.data
+      ?.map((team, idx) => {
+        const events = weeks.map((w) => {
+          const ev = team.events.find((e) => e.week === w);
+          return ev ? ev.event_key : "";
+        });
+        return {
+          teamNumber: team.team_number,
+          teamName: team.name,
+          events,
+          epa: teamEpas[idx]?.data ?? null,
+        };
+      })
+      .sort((a, b) => (b.epa ?? -Infinity) - (a.epa ?? -Infinity)) ?? [];
 
   const filteredTeams = league.data?.is_fim
     ? teamEventsByWeek.filter(({ events }) =>
         selectedWeeks.some((week) => events[week - 1] !== ""),
       )
     : teamEventsByWeek;
-
-  const prevYear = (league.data?.year ?? 0) - 1;
 
   return (
     <Table>
@@ -74,13 +79,13 @@ export const AvailableTeamsPage = () => {
         )}
       </TableHeader>
       <TableBody>
-        {filteredTeams.map(({ teamNumber, teamName, events, yearEndEpa }) => (
+        {filteredTeams.map(({ teamNumber, teamName, events, epa }) => (
           <TableRow key={teamNumber}>
             <TableCell>{teamNumber}</TableCell>
             <TableCell>{teamName}</TableCell>
             {league.data?.is_fim &&
               events.map((ev, idx) => <TableCell key={idx}>{ev}</TableCell>)}
-            <TableCell>{yearEndEpa}</TableCell>
+            <TableCell>{epa ?? "N/A"}</TableCell>
           </TableRow>
         ))}
       </TableBody>

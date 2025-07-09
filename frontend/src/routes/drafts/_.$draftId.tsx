@@ -9,6 +9,7 @@ import { useMemo, useState } from 'react'
 import { useTeamAvatar } from '@/api/useTeamAvatar'
 import { useAvailableTeams } from '@/api/useAvailableTeams'
 import { useStatboticsTeamYear } from "@/api/useStatboticsTeamYear"
+import { useStatboticsTeamYears } from "@/api/useStatboticsTeamYears"
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -32,6 +33,10 @@ const DraftBoard = () => {
   const draftOrder = useDraftOrder(draftId)
   const fantasyTeams = useFantasyTeams(league.data?.league_id.toString())
   const availableTeams = useAvailableTeams(draftId)
+  const prevYear = (league.data?.year ?? 0) - 1
+  const epaYear = league.data?.offseason ? league.data?.year : prevYear
+  const teamNumbers = availableTeams.data?.map((t) => t.team_number) ?? []
+  const teamEpas = useStatboticsTeamYears(teamNumbers, epaYear)
 
   const [selectedWeeks, setSelectedWeeks] = useState<number[]>([1, 2, 3, 4, 5])
   const [tab, setTab] = useState<'draft' | 'leagueWeeks'>('draft')
@@ -75,17 +80,21 @@ const DraftBoard = () => {
 
     const weeks = [1, 2, 3, 4, 5]
 
-    const teamEventsByWeek = availableTeams.data.map((team) => {
-      const events = weeks.map((week) => {
-        const event = team.events.find((e) => e.week === week)
-        return event ? event.event_key : ''
+    const teamEventsByWeek = availableTeams.data
+      .map((team, idx) => {
+        const events = weeks.map((week) => {
+          const event = team.events.find((e) => e.week === week)
+          return event ? event.event_key : ''
+        })
+        return {
+          teamNumber: team.team_number,
+          teamName: team.name,
+          events,
+          epa: teamEpas[idx]?.data ?? null,
+          yearEndEpa: team.year_end_epa,
+        }
       })
-      return {
-        teamNumber: team.team_number,
-        teamName: team.name,
-        events,
-      }
-    })
+      .sort((a, b) => (b.epa ?? -Infinity) - (a.epa ?? -Infinity))
 
     let filteredTeams
     if (league.data.is_fim) {
@@ -95,9 +104,6 @@ const DraftBoard = () => {
     } else {
       filteredTeams = teamEventsByWeek
     }
-
-    const prevYear = league.data.year - 1
-    const epaYear = league.data.offseason ? league.data.year : prevYear
 
     return (
       <table className="table-auto w-full border-collapse my-4 text-sm">
