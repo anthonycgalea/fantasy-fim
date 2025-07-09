@@ -14,7 +14,7 @@ const api = axios.create({
  * @param {number} [options.delay=1000] delay between attempts in milliseconds
  */
 export async function fetchWithRetry(requestFn, options = {}) {
-  const { retries = Infinity, delay = 1000 } = options;
+  const { retries = 5, delay = 5000 } = options;
   let attempt = 0;
 
   while (true) {
