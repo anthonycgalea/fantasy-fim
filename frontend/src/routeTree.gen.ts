@@ -16,7 +16,7 @@ import { Route as rootRoute } from './routes/__root'
 import { Route as LeaguesLeagueIdImport } from './routes/leagues/$leagueId'
 import { Route as DraftsDraftIdImport } from './routes/drafts/_.$draftId'
 import { Route as LeaguesLeagueIdRostersLazyImport } from './routes/leagues/$leagueId/rosters.lazy'
-import { Route as LeaguesLeagueIdAvailableLazyImport } from './routes/leagues/$leagueId/available.lazy'
+import { Route as LeaguesLeagueIdWaiversLazyImport } from './routes/leagues/$leagueId/waivers.lazy'
 import { Route as DraftsDraftIdScoresLazyImport } from './routes/drafts/$draftId/scores.lazy'
 
 // Create Virtual Routes
@@ -33,8 +33,8 @@ const EventDataLazyImport = createFileRoute('/eventData')()
 const LeaguesLeagueIdRostersLazyImport = createFileRoute(
   '/leagues/$leagueId/rosters',
 )()
-const LeaguesLeagueIdAvailableLazyImport = createFileRoute(
-  '/leagues/$leagueId/available',
+const LeaguesLeagueIdWaiversLazyImport = createFileRoute(
+  '/leagues/$leagueId/waivers',
 )()
 const DraftsDraftIdScoresLazyImport = createFileRoute(
   '/drafts/$draftId/scores',
@@ -75,12 +75,12 @@ const LeaguesLeagueIdRostersLazyRoute =
     import('./routes/leagues/$leagueId/rosters.lazy').then((d) => d.Route),
   )
 
-const LeaguesLeagueIdAvailableLazyRoute =
-  LeaguesLeagueIdAvailableLazyImport.update({
-    path: '/available',
+const LeaguesLeagueIdWaiversLazyRoute =
+  LeaguesLeagueIdWaiversLazyImport.update({
+    path: '/waivers',
     getParentRoute: () => LeaguesLeagueIdRoute,
   } as any).lazy(() =>
-    import('./routes/leagues/$leagueId/available.lazy').then((d) => d.Route),
+    import('./routes/leagues/$leagueId/waivers.lazy').then((d) => d.Route),
   )
 
 const DraftsDraftIdRoute = DraftsDraftIdImport.update({
@@ -155,11 +155,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LeaguesLeagueIdRostersLazyImport
       parentRoute: typeof LeaguesLeagueIdImport
     }
-    '/leagues/$leagueId/available': {
-      id: '/leagues/$leagueId/available'
-      path: '/available'
-      fullPath: '/leagues/$leagueId/available'
-      preLoaderRoute: typeof LeaguesLeagueIdAvailableLazyImport
+    '/leagues/$leagueId/waivers': {
+      id: '/leagues/$leagueId/waivers'
+      path: '/waivers'
+      fullPath: '/leagues/$leagueId/waivers'
+      preLoaderRoute: typeof LeaguesLeagueIdWaiversLazyImport
       parentRoute: typeof LeaguesLeagueIdImport
     }
   }
@@ -171,14 +171,14 @@ interface LeaguesLeagueIdRouteChildren {
   LeaguesLeagueIdRankingsLazyRoute: typeof LeaguesLeagueIdRankingsLazyRoute
   LeaguesLeagueIdScoresLazyRoute: typeof LeaguesLeagueIdScoresLazyRoute
   LeaguesLeagueIdRostersLazyRoute: typeof LeaguesLeagueIdRostersLazyRoute
-  LeaguesLeagueIdAvailableLazyRoute: typeof LeaguesLeagueIdAvailableLazyRoute
+  LeaguesLeagueIdWaiversLazyRoute: typeof LeaguesLeagueIdWaiversLazyRoute
 }
 
 const LeaguesLeagueIdRouteChildren: LeaguesLeagueIdRouteChildren = {
   LeaguesLeagueIdRankingsLazyRoute: LeaguesLeagueIdRankingsLazyRoute,
   LeaguesLeagueIdScoresLazyRoute: LeaguesLeagueIdScoresLazyRoute,
   LeaguesLeagueIdRostersLazyRoute: LeaguesLeagueIdRostersLazyRoute,
-  LeaguesLeagueIdAvailableLazyRoute: LeaguesLeagueIdAvailableLazyRoute,
+  LeaguesLeagueIdWaiversLazyRoute: LeaguesLeagueIdWaiversLazyRoute,
 }
 
 const LeaguesLeagueIdRouteWithChildren = LeaguesLeagueIdRoute._addFileChildren(
@@ -205,7 +205,7 @@ export interface FileRoutesByFullPath {
   '/leagues/$leagueId/rankings': typeof LeaguesLeagueIdRankingsLazyRoute
   '/leagues/$leagueId/scores': typeof LeaguesLeagueIdScoresLazyRoute
   '/leagues/$leagueId/rosters': typeof LeaguesLeagueIdRostersLazyRoute
-  '/leagues/$leagueId/available': typeof LeaguesLeagueIdAvailableLazyRoute
+  '/leagues/$leagueId/waivers': typeof LeaguesLeagueIdWaiversLazyRoute
 }
 
 export interface FileRoutesByTo {
@@ -216,7 +216,7 @@ export interface FileRoutesByTo {
   '/leagues/$leagueId/rankings': typeof LeaguesLeagueIdRankingsLazyRoute
   '/leagues/$leagueId/scores': typeof LeaguesLeagueIdScoresLazyRoute
   '/leagues/$leagueId/rosters': typeof LeaguesLeagueIdRostersLazyRoute
-  '/leagues/$leagueId/available': typeof LeaguesLeagueIdAvailableLazyRoute
+  '/leagues/$leagueId/waivers': typeof LeaguesLeagueIdWaiversLazyRoute
 }
 
 export interface FileRoutesById {
@@ -229,7 +229,7 @@ export interface FileRoutesById {
   '/leagues/$leagueId/rankings': typeof LeaguesLeagueIdRankingsLazyRoute
   '/leagues/$leagueId/scores': typeof LeaguesLeagueIdScoresLazyRoute
   '/leagues/$leagueId/rosters': typeof LeaguesLeagueIdRostersLazyRoute
-  '/leagues/$leagueId/available': typeof LeaguesLeagueIdAvailableLazyRoute
+  '/leagues/$leagueId/waivers': typeof LeaguesLeagueIdWaiversLazyRoute
 }
 
 export interface FileRouteTypes {
@@ -243,7 +243,7 @@ export interface FileRouteTypes {
     | '/leagues/$leagueId/rankings'
     | '/leagues/$leagueId/scores'
     | '/leagues/$leagueId/rosters'
-    | '/leagues/$leagueId/available'
+    | '/leagues/$leagueId/waivers'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -254,7 +254,7 @@ export interface FileRouteTypes {
     | '/leagues/$leagueId/rankings'
     | '/leagues/$leagueId/scores'
     | '/leagues/$leagueId/rosters'
-    | '/leagues/$leagueId/available'
+    | '/leagues/$leagueId/waivers'
   id:
     | '__root__'
     | '/'
@@ -265,7 +265,7 @@ export interface FileRouteTypes {
     | '/leagues/$leagueId/rankings'
     | '/leagues/$leagueId/scores'
     | '/leagues/$leagueId/rosters'
-    | '/leagues/$leagueId/available'
+    | '/leagues/$leagueId/waivers'
   fileRoutesById: FileRoutesById
 }
 
@@ -311,7 +311,7 @@ export const routeTree = rootRoute
         "/leagues/$leagueId/rankings",
         "/leagues/$leagueId/scores",
         "/leagues/$leagueId/rosters",
-        "/leagues/$leagueId/available"
+        "/leagues/$leagueId/waivers"
       ]
     },
     "/drafts//$draftId": {
@@ -335,8 +335,8 @@ export const routeTree = rootRoute
       "filePath": "leagues/$leagueId/rosters.lazy.tsx",
       "parent": "/leagues/$leagueId"
     },
-    "/leagues/$leagueId/available": {
-      "filePath": "leagues/$leagueId/available.lazy.tsx",
+    "/leagues/$leagueId/waivers": {
+      "filePath": "leagues/$leagueId/waivers.lazy.tsx",
       "parent": "/leagues/$leagueId"
     },
     "/drafts/$draftId/scores": {
