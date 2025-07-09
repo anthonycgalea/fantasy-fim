@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, abort
 from flask_cors import CORS
+from flask_caching import Cache
 from flasgger import Swagger
 from sqlalchemy import create_engine
 from sqlalchemy import cast, Integer
@@ -7,15 +8,28 @@ from sqlalchemy import func, case
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import and_
 import os
+import requests
 from models.base import Base
 from models.scores import *
 from models.draft import *
 from models.transactions import *
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
+TBA_API_ENDPOINT = "https://www.thebluealliance.com/api/v3/"
+TBA_AUTH_KEY = os.getenv("TBA_API_KEY")
+
 app = Flask(__name__)
+
+config = {
+    "CACHE_TYPE": "simple",
+    "CACHE_DEFAULT_TIMEOUT": 5
+}
+
+app.config.from_mapping(config)
+cache = Cache(app)
 
 app.config['SWAGGER'] = {
     'title': 'Fantasy FiM API',
@@ -1545,6 +1559,24 @@ def get_available_teams_fim(leagueId):
             return jsonify({"error": "No available teams found"}), 404
 
         return jsonify(list(available_teams.values()))
+@cache.cached(timeout=86400)
+@app.route('/api/team-avatar/<team_number>/year/<year>', methods=['GET'])
+def get_team_avatar(team_number, year):
+    requestURL = TBA_API_ENDPOINT + f"team/frc{team_number}/media/{year}"
+    response = requests.get(requestURL, headers={"X-TBA-Auth-Key": TBA_AUTH_KEY}).json()
+    
+    if len(response) == 0:
+        return jsonify({"team_number": team_number, "image": None})
+
+    try:
+      # Filter the response to only include the avatar image
+      avatarImage = list(filter(lambda x: x["type"] == "avatar", response))[0]
+
+      print(avatarImage["details"]["base64Image"])
+
+      return jsonify({"team_number": team_number, "image": avatarImage["details"]["base64Image"]})
+    except:
+      return jsonify({"team_number": team_number, "image": None})
 
 @app.route('/api/fimeventdata', methods=['GET'])
 def get_fim_event_data():
