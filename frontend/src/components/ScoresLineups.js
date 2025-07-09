@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Tab, Tabs, Table, Row, Col } from 'react-bootstrap';
-import api from '../api'; // Adjust the import path for your API object
+import api, { fetchWithRetry } from '../api';
 import './ScoresLineups.css';
 
 const ScoresLineups = ({ leagueId }) => {
@@ -12,49 +12,42 @@ const ScoresLineups = ({ leagueId }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchLineups = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get(`/leagues/${leagueId}/lineups`);
-        setLineups(response.data);
+        const [lineupRes, leagueRes, champRes] = await Promise.all([
+          fetchWithRetry(() => api.get(`/leagues/${leagueId}/lineups`)),
+          fetchWithRetry(() => api.get(`/leagues/${leagueId}`)),
+          fetchWithRetry(() => api.get(`/leagues/${leagueId}/statesTeams`))
+        ]);
+        setLineups(lineupRes.data);
+        setLeagueInfo(leagueRes.data);
+        setChampionshipTeams(champRes.data); // No year check
       } catch (err) {
-        setError('Failed to fetch lineups');
+        setError('Failed to fetch league data');
       }
     };
 
-    const fetchLeagueInfo = async () => {
-      try {
-        const response = await api.get(`/leagues/${leagueId}`);
-        setLeagueInfo(response.data);
-      } catch (err) {
-        setError('Failed to fetch league info');
-      }
-    };
-
-    const fetchChampionshipTeams = async () => {
-      try {
-        const response = await api.get(`/leagues/${leagueId}/statesTeams`);
-        setChampionshipTeams(response.data); // No year check
-      } catch (err) {
-        setError('Failed to fetch championship teams');
-      }
-    };
-
-    fetchLineups();
-    fetchLeagueInfo();
-    fetchChampionshipTeams();
+    fetchData();
   }, [leagueId]);
 
   useEffect(() => {
     const fetchWeeklyScores = async () => {
       const scores = {};
-      const promises = lineups.map(({ week }) =>
-        api.get(`/leagues/${leagueId}/fantasyScores/${week}`).then(response => {
-          scores[week] = response.data;
-        })
-      );
-      await Promise.all(promises);
-      setWeeklyScores(scores);
-      setLoading(false);
+      try {
+        const promises = lineups.map(({ week }) =>
+          fetchWithRetry(() =>
+            api.get(`/leagues/${leagueId}/fantasyScores/${week}`)
+          ).then(response => {
+            scores[week] = response.data;
+          })
+        );
+        await Promise.all(promises);
+        setWeeklyScores(scores);
+      } catch (err) {
+        setError('Failed to fetch weekly scores');
+      } finally {
+        setLoading(false);
+      }
     };
 
     if (lineups.length > 0) {
