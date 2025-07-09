@@ -1591,7 +1591,13 @@ def get_team_avatar(team_number, year):
 # New endpoint to fetch cached EPA values for multiple teams
 @app.route('/api/epa', methods=['GET'])
 def get_team_epas():
-    """Return cached EPA values for the specified teams and year."""
+    """Return cached EPA values for the specified teams and year.
+
+    If a team/year combination is not cached locally the endpoint will
+    attempt to fetch the value directly from Statbotics and store it for
+    future use (provided the team exists in the database).
+    """
+
     teams_param = request.args.get('teams')
     year = request.args.get('year', type=int)
 
@@ -1607,7 +1613,52 @@ def get_team_epas():
         )
         results = {row.team_number: row.year_end_epa for row in query.all()}
 
-    # Ensure all requested teams are present in the response
+        missing_teams = [t for t in teams if t not in results]
+        for team in missing_teams:
+            try:
+                resp = requests.get(
+                    f"https://api.statbotics.io/v3/team_year/{team}/{year}", timeout=10
+                )
+                if resp.status_code != 200:
+                    continue
+                data = resp.json()
+
+                unitless_epa = data.get("unitless_epa_end")
+                if unitless_epa is None:
+                    epa_end = data.get("epa_end")
+                    if isinstance(epa_end, dict):
+                        unitless_epa = epa_end.get("unitless")
+                    elif isinstance(epa_end, (int, float)):
+                        unitless_epa = epa_end
+                if unitless_epa is None:
+                    epa = data.get("epa")
+                    if isinstance(epa, dict):
+                        unitless_epa = epa.get("unitless")
+
+                if unitless_epa is not None:
+                    results[team] = int(unitless_epa)
+
+                    # Cache the result if we have the team stored locally
+                    if (
+                        session.query(Team).filter(Team.team_number == team).count() > 0
+                        and session.query(StatboticsData)
+                        .filter(
+                            StatboticsData.team_number == team,
+                            StatboticsData.year == year,
+                        )
+                        .count()
+                        == 0
+                    ):
+                        session.add(
+                            StatboticsData(
+                                team_number=team, year=year, year_end_epa=int(unitless_epa)
+                            )
+                        )
+                        session.commit()
+            except Exception:
+                # If fetching fails we simply skip caching for this team
+                continue
+
     epa_map = {team: results.get(team) for team in teams}
     return jsonify(epa_map)
 
