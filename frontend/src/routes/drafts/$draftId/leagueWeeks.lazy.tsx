@@ -4,6 +4,7 @@ import { useLeague } from "@/api/useLeague";
 import { useFantasyTeams } from "@/api/useFantasyTeams";
 import { usePicks } from "@/api/usePicks";
 import React from "react";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -50,7 +51,9 @@ export const DraftLeagueWeeksPage = () => {
         <TableRow>
           <TableHead>Fantasy Team</TableHead>
           {weeks.map((w) => (
-            <TableHead key={w}>Week {w}</TableHead>
+            <TableHead key={w} className="text-center">
+              Week {w}
+            </TableHead>
           ))}
         </TableRow>
       </TableHeader>
@@ -68,7 +71,10 @@ export const DraftLeagueWeeksPage = () => {
                 className = "bg-red-300";
               }
               return (
-                <TableCell key={index} className={className}>
+                <TableCell
+                  key={index}
+                  className={cn(className, "text-black text-center")}
+                >
                   {count}
                 </TableCell>
               );
