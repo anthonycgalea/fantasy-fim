@@ -2,6 +2,8 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import { useLineups } from "@/api/useLineups";
 import { FantasyTeamLineup } from "@/types/FantasyTeamLineup";
 import React from "react";
+import { useLeague } from "@/api/useLeague";
+import { useCurrentWeek } from "@/api/useCurrentWeek";
 import {
   Select,
   SelectContent,
@@ -23,8 +25,21 @@ import { useLineupScore, useTeamScore } from "../../../api/useScore";
 export const ScoresPage = () => {
   const { leagueId } = Route.useParams();
   const lineups = useLineups(leagueId);
+  const league = useLeague(leagueId);
+  const currentWeek = useCurrentWeek();
 
   const [selectedWeek, setSelectedWeek] = React.useState(1);
+
+  React.useEffect(() => {
+    if (
+      currentWeek.data &&
+      league.data &&
+      league.data.year === currentWeek.data.year &&
+      selectedWeek === 1
+    ) {
+      setSelectedWeek(currentWeek.data.week);
+    }
+  }, [currentWeek.data, league.data]);
 
   const maxTeamCount =
     lineups.data

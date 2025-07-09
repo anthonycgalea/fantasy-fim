@@ -75,6 +75,54 @@ Base.metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)
 
+@app.route('/api/currentWeek', methods=['GET'])
+def get_current_week():
+    """
+    Retrieve the currently active week.
+    ---
+    tags:
+      - Weeks
+    responses:
+      200:
+        description: The currently active week.
+        schema:
+          type: object
+          properties:
+            year:
+              type: integer
+              example: 2024
+            week:
+              type: integer
+              example: 1
+            lineups_locked:
+              type: boolean
+            scores_finalized:
+              type: boolean
+            active:
+              type: boolean
+      404:
+        description: No active week found.
+    """
+    session = Session()
+    week = (
+        session.query(WeekStatus)
+        .filter(WeekStatus.active == True)
+        .order_by(WeekStatus.year.asc(), WeekStatus.week.asc())
+        .first()
+    )
+    session.close()
+    if not week:
+        return jsonify({"error": "No active week found"}), 404
+    return jsonify(
+        {
+            "year": week.year,
+            "week": week.week,
+            "lineups_locked": week.lineups_locked,
+            "scores_finalized": week.scores_finalized,
+            "active": week.active,
+        }
+    )
+
 @app.route('/api/leagues', methods=['GET'])
 def get_leagues():
     """

@@ -10,6 +10,7 @@ import { useTeamAvatar } from '@/api/useTeamAvatar'
 import { useAvailableTeams } from '@/api/useAvailableTeams'
 import { useStatboticsTeamYear } from "@/api/useStatboticsTeamYear"
 import { useStatboticsTeamYears } from "@/api/useStatboticsTeamYears"
+import { useCurrentWeek } from "@/api/useCurrentWeek"
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -33,8 +34,16 @@ const DraftBoard = () => {
   const draftOrder = useDraftOrder(draftId)
   const fantasyTeams = useFantasyTeams(league.data?.league_id.toString())
   const availableTeams = useAvailableTeams(draftId)
+  const currentWeek = useCurrentWeek()
   const prevYear = (league.data?.year ?? 0) - 1
-  const epaYear = league.data?.offseason ? league.data?.year : prevYear
+  let epaYear = league.data?.offseason ? league.data?.year : prevYear
+  if (
+    !league.data?.offseason &&
+    currentWeek.data &&
+    currentWeek.data.year === league.data?.year
+  ) {
+    epaYear = currentWeek.data.week === 1 ? prevYear : league.data.year
+  }
   const teamNumbers = availableTeams.data?.map((t) => t.team_number) ?? []
   const teamEpas = useStatboticsTeamYears(teamNumbers, epaYear)
 
