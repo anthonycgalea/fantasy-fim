@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -80,20 +79,28 @@ const RostersGrid = ({
   year: number | undefined;
 }) => {
   return (
-    <div className="grid grid-cols-2 gap-4">
-      {rosters.map((team) => (
-        <Card key={team.fantasy_team_id}>
-          <CardHeader>{team.fantasy_team_name}</CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-2">
-              {team.roster.map((r) => (
-                <RosterTeamCard key={r} teamKey={r} year={year} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Fantasy Team</TableHead>
+          <TableHead>Roster</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rosters.map((team) => (
+          <TableRow key={team.fantasy_team_id}>
+            <TableCell className="font-bold">{team.fantasy_team_name}</TableCell>
+            <TableCell>
+              <div className="flex flex-wrap gap-2">
+                {team.roster.map((r) => (
+                  <RosterTeamCard key={r} teamKey={r} year={year} />
+                ))}
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 };
 
