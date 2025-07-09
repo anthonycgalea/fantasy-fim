@@ -10,11 +10,6 @@ export const Navbar = () => {
           </Link>
         </li>
         <li>
-          <Link to="/eventData" className="hover:underline">
-            Events
-          </Link>
-        </li>
-        <li>
           <Link to="/leagues" className="hover:underline">
             Leagues
           </Link>
@@ -28,6 +23,11 @@ export const Navbar = () => {
           <a href="/apidocs" className="hover:underline">
             API
           </a>
+        </li>
+        <li>
+          <Link to="/eventData" className="hover:underline">
+            Events
+          </Link>
         </li>
         <li>
           <a
