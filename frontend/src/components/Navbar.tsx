@@ -34,7 +34,7 @@ export const Navbar = () => {
       <ul className="flex gap-4">
         <li>
           <Link to="/" className="flex items-center">
-            <img src="/logo.svg" alt="Fantasy FiM logo" className="w-8 h-8" />
+            <img src="/IMG_0413.png" alt="Fantasy FiM logo" className="w-8 h-8" />
           </Link>
         </li>
         <li className="relative group">
