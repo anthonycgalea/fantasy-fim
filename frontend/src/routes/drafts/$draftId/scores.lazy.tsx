@@ -1,4 +1,4 @@
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute, Link } from "@tanstack/react-router";
 import { useDraft } from "@/api/useDraft";
 import { useDraftScores } from "@/api/useDraftScores";
 import { useLeague } from "@/api/useLeague";
@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import React from "react";
 
 export const DraftScoresPage = () => {
@@ -27,10 +28,21 @@ export const DraftScoresPage = () => {
   const weeklyStarts = league.data?.weekly_starts ?? 0;
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      {scores.data?.map((team) => (
-        <Card key={team.fantasy_team_id}>
-          <CardHeader>{team.fantasy_team_name}</CardHeader>
+    <div className="w-full min-w-[1000px] overflow-x-scroll overflow-y-scroll">
+      <div className="flex flex-col items-center">
+        <h1 className="text-3xl font-bold text-center">
+          {league.data?.league_name}
+        </h1>
+      </div>
+      <div className="text-center my-4">
+        <Link to="/drafts/$draftId" params={{ draftId }}>
+          <Button>View Draft</Button>
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        {scores.data?.map((team) => (
+          <Card key={team.fantasy_team_id}>
+            <CardHeader>{team.fantasy_team_name}</CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
@@ -63,7 +75,8 @@ export const DraftScoresPage = () => {
             </Table>
           </CardContent>
         </Card>
-      ))}
+        ))}
+      </div>
     </div>
   );
 };
