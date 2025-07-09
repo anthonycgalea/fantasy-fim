@@ -191,6 +191,8 @@ const DraftBoardCard = ({
   const teamAvatar = useTeamAvatar(team?.team_picked, year)
   return (
     <a
+      data-round={pick.round}
+      data-pick={pick.pick}
       href={
         team?.team_picked !== '-1'
           ? `https://www.thebluealliance.com/team/${team?.team_picked}/${year}`
@@ -228,7 +230,7 @@ export const Route = createFileRoute('/drafts//$draftId')({
     return {
       autoRefreshInterval: search?.autoRefreshInterval
         ? Number(search.autoRefreshInterval)
-        : (false as false),
+        : false as const,
     }
   },
 })
