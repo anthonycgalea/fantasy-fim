@@ -183,6 +183,40 @@ class ManageTeam(commands.Cog):
             await deferred.edit(content=f"{fantasyteam.fantasy_team_name} is sitting team {frcteam} competing at {event.event_name} in week {week}.")
         session.close()
 
+    async def setLineupTask(self, interaction: discord.Interaction, week: int, teams: list[str], fantasyId: int):
+        deferred = await interaction.original_response()
+        session = await self.bot.get_session()
+        fantasyteam: FantasyTeam = session.query(FantasyTeam).filter(FantasyTeam.fantasy_team_id==fantasyId).first()
+        league: League = session.query(League).filter(League.league_id==fantasyteam.league_id).first()
+        # is this a fim season long league?
+        if (not league.is_fim):
+            await deferred.edit(content="This league does not support starts/sits.")
+            session.close()
+            return
+
+        # Check if lineups are locked for the given week in this league
+        week_status = session.query(WeekStatus)\
+            .filter(WeekStatus.year == league.year)\
+            .filter(WeekStatus.week == week).first()
+
+        if week_status and week_status.lineups_locked:
+            await deferred.edit(content="Lineups are locked for this week, you cannot modify your lineup at this time.")
+            session.close()
+            return
+
+        # remove all existing starts for this week
+        session.query(TeamStarted)\
+            .filter(TeamStarted.league_id==league.league_id)\
+            .filter(TeamStarted.fantasy_team_id==fantasyId)\
+            .filter(TeamStarted.week==week).delete()
+        session.commit()
+
+        # start each team provided
+        for team in teams:
+            await self.startTeamTask(interaction, frcteam=team, week=week, fantasyId=fantasyId)
+
+        session.close()
+
     async def renameTeamTask(self, interaction: discord.Interaction, newname: str, fantasyId: int):
         deferred = await interaction.original_response()
         session = await self.bot.get_session()
@@ -565,6 +599,17 @@ class ManageTeam(commands.Cog):
             return
         else:
             await self.sitTeamTask(interaction=interaction, week=week, frcteam=frcteam, fantasyId=teamId)
+
+    @app_commands.command(name="setlineup", description="Set entire lineup with comma-separated team list")
+    async def setLineup(self, interaction: discord.Interaction, week: int, lineup: str):
+        await interaction.response.send_message("Setting lineup...", ephemeral=True)
+        team_id = await self.getFantasyTeamIdFromInteraction(interaction)
+        if team_id is None:
+            msg = await interaction.original_response()
+            await msg.edit(content="You are not in this league!")
+            return
+        team_list = [t.strip() for t in lineup.split(',') if t.strip()]
+        await self.setLineupTask(interaction, week, team_list, team_id)
 
     @app_commands.command(name="addusertoteam", description="Add an authorized user to your fantasy team")
     async def authorizeUser(self, interaction: discord.Interaction, user: discord.User):
