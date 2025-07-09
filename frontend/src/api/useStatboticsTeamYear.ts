@@ -9,12 +9,13 @@ export const useStatboticsTeamYear = (
     enabled: !!team && !!year,
     queryFn: async () => {
       const response = await fetch(
-        `https://api.statbotics.io/v3/team_year/${team}/${year}`,
+        `/api/epa?teams=${team}&year=${year}`,
       );
       if (!response.ok) return null;
       try {
         const data = await response.json();
-        return typeof data?.epa?.unitless === "number" ? data.epa.unitless : null;
+        const value = data?.[team as string];
+        return typeof value === "number" ? value : null;
       } catch {
         return null;
       }
