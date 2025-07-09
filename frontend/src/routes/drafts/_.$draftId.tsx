@@ -50,7 +50,7 @@ const DraftBoard = () => {
 
   return (
     <div className="w-full min-w-[1000px] overflow-x-scroll overflow-y-scroll">
-      <h1 className="text-3xl font-bold">{league.data?.league_name}</h1>
+      <h1 className="text-3xl font-bold text-center">{league.data?.league_name}</h1>
 
       <div
         className={`grid`}
