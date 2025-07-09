@@ -128,7 +128,7 @@ const DraftBoardCard = ({
   );
 };
 
-export const Route = createFileRoute("/drafts//$draftId")({
+export const Route = createFileRoute("/drafts/_/$draftId")({
   component: DraftBoard,
   validateSearch: (search: Record<string, unknown>) => {
     return {
