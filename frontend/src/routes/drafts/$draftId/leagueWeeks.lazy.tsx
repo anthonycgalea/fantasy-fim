@@ -3,7 +3,6 @@ import { useDraft } from "@/api/useDraft";
 import { useLeague } from "@/api/useLeague";
 import { useFantasyTeams } from "@/api/useFantasyTeams";
 import { usePicks } from "@/api/usePicks";
-import React from "react";
 import { cn } from "@/lib/utils";
 import {
   Table,

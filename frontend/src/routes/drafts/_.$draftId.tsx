@@ -240,7 +240,7 @@ const DraftBoardCard = ({
             .join(', ')
           : ''}
       </p>
-      <p className="text-sm">EPA: {epa ?? 'N/A'}</p>
+      <p className="text-sm">EPA: {String(epa ?? 'N/A')}</p>
 
       {teamAvatar.data?.image && (
         <img
@@ -273,7 +273,7 @@ const AvailableTeamCard = ({
     >
       <p className="text-xl font-bold">{team.teamNumber}</p>
       {weeks && <p className="text-sm">{weeks}</p>}
-      <p className="text-sm">EPA: {team.epa ?? 'N/A'}</p>
+      <p className="text-sm">EPA: {String(team.epa ?? 'N/A')}</p>
       {teamAvatar.data?.image && (
         <img
           src={`data:image/png;base64,${teamAvatar.data.image}`}
