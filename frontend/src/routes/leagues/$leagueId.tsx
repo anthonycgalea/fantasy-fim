@@ -6,21 +6,26 @@ import {
   useLocation,
 } from "@tanstack/react-router";
 import { useLeague } from "@/api/useLeague";
+import { useLeagueDrafts } from "@/api/useLeagueDrafts";
 import { Button } from "@/components/ui/button";
-
-const buttons = [
-  { label: "Rankings", to: "/leagues/$leagueId/rankings" },
-  { label: "Scores/Lineups", to: "/leagues/$leagueId/scores" },
-  { label: "Rosters", to: "/leagues/$leagueId/rosters" },
-  { label: "Available Teams", to: "/leagues/$leagueId/available" },
-  { label: "Waivers", to: "/leagues/$leagueId/waivers" },
-  { label: "Drafts", to: "/leagues/$leagueId/drafts" },
-];
 
 export const LeaguePage = () => {
   const { leagueId } = Route.useParams();
   const leagueData = useLeague(leagueId);
+  const drafts = useLeagueDrafts(leagueId);
   const location = useLocation();
+
+  const firstDraftId = drafts.data?.[0]?.draft_id;
+  const buttons = [
+    { label: "Rankings", to: "/leagues/$leagueId/rankings" },
+    { label: "Scores/Lineups", to: "/leagues/$leagueId/scores" },
+    { label: "Rosters", to: "/leagues/$leagueId/rosters" },
+    { label: "Available Teams", to: "/leagues/$leagueId/available" },
+    { label: "Waivers", to: "/leagues/$leagueId/waivers" },
+    leagueData.data?.is_fim && firstDraftId
+      ? { label: "Draft", to: `/drafts/${firstDraftId}` }
+      : { label: "Drafts", to: "/leagues/$leagueId/drafts" },
+  ];
 
   return (
     <div className="max-w-4xl mx-auto">
