@@ -31,7 +31,7 @@ The Fantasy Robotics League App is a web platform where users can create leagues
 ## **Technologies**
 
 - **Backend:** Python (Flask, SQLAlchemy, Discord.py)
-- **Frontend:** React, Bootstrap
+- **Frontend:** Vite, Tailwind, React Router
 - **Database:** PostgreSQL
 - **APIs:** Flask-based API for scores, teams, and rankings
 
