@@ -8,6 +8,7 @@ import { useFantasyTeams } from '@/api/useFantasyTeams'
 import { useMemo, useState } from 'react'
 import { useTeamAvatar } from '@/api/useTeamAvatar'
 import { useAvailableTeams } from '@/api/useAvailableTeams'
+import { useStatboticsTeamYear } from "@/api/useStatboticsTeamYear"
 import { Button } from '@/components/ui/button'
 
 const DraftBoard = () => {
@@ -22,6 +23,7 @@ const DraftBoard = () => {
   const draftOrder = useDraftOrder(draftId)
   const fantasyTeams = useFantasyTeams(league.data?.league_id.toString())
   const availableTeams = useAvailableTeams(draftId)
+  const location = useLocation()
 
   const [selectedWeeks, setSelectedWeeks] = useState<number[]>([1, 2, 3, 4, 5])
 
@@ -73,7 +75,6 @@ const DraftBoard = () => {
         teamNumber: team.team_number,
         teamName: team.name,
         events,
-        yearEndEpa: team.year_end_epa,
       }
     })
 
@@ -87,6 +88,7 @@ const DraftBoard = () => {
     }
 
     const prevYear = league.data.year - 1
+    const epaYear = league.data.offseason ? league.data.year : prevYear
 
     return (
       <table className="table-auto w-full border-collapse my-4 text-sm">
@@ -121,7 +123,7 @@ const DraftBoard = () => {
           )}
         </thead>
         <tbody>
-          {filteredTeams.map(({ teamNumber, teamName, events, yearEndEpa }) => (
+          {filteredTeams.map(({ teamNumber, teamName, events }) => (
             <tr key={teamNumber}>
               <td className="border px-2 py-1">{teamNumber}</td>
               <td className="border px-2 py-1">{teamName}</td>
@@ -131,15 +133,13 @@ const DraftBoard = () => {
                     {event}
                   </td>
                 ))}
-              <td className="border px-2 py-1">{yearEndEpa}</td>
+              <td className="border px-2 py-1"><TeamEPA teamNumber={teamNumber} year={epaYear} /></td>
             </tr>
           ))}
         </tbody>
       </table>
     )
   }
-
-  const location = useLocation()
 
   return (
     <div className="w-full min-w-[1000px] overflow-x-scroll overflow-y-scroll">
@@ -206,6 +206,17 @@ const DraftBoard = () => {
       {renderAvailableTeams()}
     </div>
   )
+}
+
+const TeamEPA = ({
+  teamNumber,
+  year,
+}: {
+  teamNumber: number
+  year: number
+}) => {
+  const { data } = useStatboticsTeamYear(teamNumber, year)
+  return <>{data ?? 'N/A'}</>
 }
 
 const DraftBoardCard = ({
