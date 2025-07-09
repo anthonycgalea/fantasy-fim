@@ -83,6 +83,8 @@ The Fantasy Robotics League App is a web platform where users can create leagues
    ```bash
    npm start
    ```
+4. Replace `frontend/public/IMG_0413.png` with your own image to customize the
+   navbar logo.
 
 ### **Database Setup**
 
