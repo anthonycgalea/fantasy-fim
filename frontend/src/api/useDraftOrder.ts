@@ -3,7 +3,13 @@ import { DraftOrderPlayer } from "../types/DraftSlot"
 
 export const useDraftOrder = (draftId: string) => {
     return useQuery<DraftOrderPlayer[]>({
-        queryFn: () => fetch(`/api/drafts/${draftId}/draftOrder`).then((res) => res.json()),
+        queryFn: async () => {
+            const res = await fetch(`/api/drafts/${draftId}/draftOrder`)
+            if (!res.ok) {
+                throw new Error('Failed to fetch draft order')
+            }
+            return res.json() as Promise<DraftOrderPlayer[]>
+        },
         queryKey: ['draftOrder', draftId],
-    })
-}
+        enabled: !!draftId,
+    })}
