@@ -32,16 +32,16 @@ const DraftBoard = () => {
 
   const draftOrderPlayers = useMemo(
     () =>
-      draftOrder.data?.map((order) => ({
-        ...order,
-        team: fantasyTeams.data?.find(
-          (team) => team.fantasy_team_id === order.fantasy_team_id,
-        ),
-      })),
+      Array.isArray(draftOrder.data)
+        ? draftOrder.data.map((order) => ({
+            ...order,
+            team: fantasyTeams.data?.find(
+              (t) => t.fantasy_team_id === order.fantasy_team_id,
+            ),
+          }))
+        : [],
     [draftOrder.data, fantasyTeams.data],
   )
-
-  console.log(draftOrder.data, fantasyTeams.data, draftOrderPlayers)
 
   if (!draft.data || !league.data || !picks.data || !draftOrder.data) {
     return <div>Loading...</div>
