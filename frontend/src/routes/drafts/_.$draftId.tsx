@@ -202,17 +202,6 @@ const DraftBoard = () => {
   )
 }
 
-const TeamEPA = ({
-  teamNumber,
-  year,
-}: {
-  teamNumber: number
-  year: number
-}) => {
-  const { data } = useStatboticsTeamYear(teamNumber, year)
-  return <>{data ?? 'N/A'}</>
-}
-
 const DraftBoardCard = ({
   pick,
   team,

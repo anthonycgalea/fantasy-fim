@@ -33,8 +33,8 @@ export const Navbar = () => {
     <nav className="w-full py-4 mb-4 border-b">
       <ul className="flex gap-4">
         <li>
-          <Link to="/" className="hover:underline">
-            Home
+          <Link to="/" className="flex items-center">
+            <img src="/logo.svg" alt="Fantasy FiM logo" className="w-8 h-8" />
           </Link>
         </li>
         <li className="relative group">
