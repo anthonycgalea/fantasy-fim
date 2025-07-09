@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useLocation } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useDraft } from '@/api/useDraft'
 import { useLeague } from '@/api/useLeague'
 import { usePicks } from '@/api/usePicks'
@@ -9,6 +9,14 @@ import { useMemo, useState } from 'react'
 import { useTeamAvatar } from '@/api/useTeamAvatar'
 import { useAvailableTeams } from '@/api/useAvailableTeams'
 import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 const DraftBoard = () => {
   const { draftId } = Route.useParams()
@@ -24,6 +32,7 @@ const DraftBoard = () => {
   const availableTeams = useAvailableTeams(draftId)
 
   const [selectedWeeks, setSelectedWeeks] = useState<number[]>([1, 2, 3, 4, 5])
+  const [tab, setTab] = useState<'draft' | 'leagueWeeks'>('draft')
 
   const toggleWeekSelection = (week: number) => {
     setSelectedWeeks((prev) =>
@@ -139,24 +148,24 @@ const DraftBoard = () => {
     )
   }
 
-  const location = useLocation()
-
   return (
     <div className="w-full min-w-[1000px] overflow-x-scroll overflow-y-scroll">
       <div className="flex flex-col items-center">
         <h1 className="text-3xl font-bold text-center">{league.data?.league_name}</h1>
         {league.data && !league.data.offseason && (
           <div className="flex gap-2 mt-2">
-            <Link to="/drafts/$draftId" params={{ draftId }}>
-              <Button variant={location.pathname.endsWith('/leagueWeeks') ? 'outline' : 'default'}>
-                Draft
-              </Button>
-            </Link>
-            <Link to="/drafts/$draftId/leagueWeeks" params={{ draftId }}>
-              <Button variant={location.pathname.endsWith('/leagueWeeks') ? 'default' : 'outline'}>
-                League Weeks
-              </Button>
-            </Link>
+            <Button
+              variant={tab === 'draft' ? 'default' : 'outline'}
+              onClick={() => setTab('draft')}
+            >
+              Draft
+            </Button>
+            <Button
+              variant={tab === 'leagueWeeks' ? 'default' : 'outline'}
+              onClick={() => setTab('leagueWeeks')}
+            >
+              League Weeks
+            </Button>
             <Link to="/leagues/$leagueId" params={{ leagueId: league.data.league_id.toString() }}>
               <Button variant="outline">Back to League</Button>
             </Link>
@@ -171,39 +180,47 @@ const DraftBoard = () => {
         </div>
       )}
 
-      <div
-        className={`grid`}
-        style={{
-          gridTemplateColumns: `repeat(${draftOrder.data?.length ?? 1}, 1fr)`,
-        }}
-      >
-        {draftOrderPlayers?.map((order) => (
-          <div className="text-center mb-4" key={order.fantasy_team_id}>
-            {order.team?.team_name}
+      {tab === 'draft' && (
+        <>
+          <div
+            className={`grid`}
+            style={{
+              gridTemplateColumns: `repeat(${draftOrder.data?.length ?? 1}, 1fr)`,
+            }}
+          >
+            {draftOrderPlayers?.map((order) => (
+              <div className="text-center mb-4" key={order.fantasy_team_id}>
+                {order.team?.team_name}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      {picksInRound.map((row, rowIndex) => (
-        <div
-          key={rowIndex}
-          className="grid mb-1 gap-1"
-          style={{
-            gridTemplateColumns: `repeat(${draftOrder.data?.length ?? 1}, 1fr)`,
-          }}
-        >
-          {(rowIndex % 2 === 0 ? row : [...row].reverse()).map(
-            (pick, colIndex) => (
-              <DraftBoardCard
-                key={rowIndex * (draftOrder.data?.length ?? 1) + colIndex + 1}
-                pick={{ round: rowIndex + 1, pick: colIndex + 1 }}
-                team={pick}
-                year={league.data?.year}
-              />
-            ),
-          )}
-        </div>
-      ))}
-      {renderAvailableTeams()}
+          {picksInRound.map((row, rowIndex) => (
+            <div
+              key={rowIndex}
+              className="grid mb-1 gap-1"
+              style={{
+                gridTemplateColumns: `repeat(${draftOrder.data?.length ?? 1}, 1fr)`,
+              }}
+            >
+              {(rowIndex % 2 === 0 ? row : [...row].reverse()).map(
+                (pick, colIndex) => (
+                  <DraftBoardCard
+                    key={
+                      rowIndex * (draftOrder.data?.length ?? 1) + colIndex + 1
+                    }
+                    pick={{ round: rowIndex + 1, pick: colIndex + 1 }}
+                    team={pick}
+                    year={league.data?.year}
+                  />
+                ),
+              )}
+            </div>
+          ))}
+          {renderAvailableTeams()}
+        </>
+      )}
+
+      {tab === 'leagueWeeks' && <LeagueWeeksTab />}
     </div>
   )
 }
@@ -250,6 +267,76 @@ const DraftBoardCard = ({
         />
       )}
     </a>
+  )
+}
+
+const LeagueWeeksTab = () => {
+  const { draftId } = Route.useParams()
+  const draft = useDraft(draftId)
+  const league = useLeague(draft.data?.league_id.toString())
+  const draftPicks = usePicks(draftId)
+  const fantasyTeams = useFantasyTeams(league.data?.league_id.toString())
+
+  if (
+    draft.isLoading ||
+    league.isLoading ||
+    draftPicks.isLoading ||
+    fantasyTeams.isLoading
+  ) {
+    return <div>Loading...</div>
+  }
+
+  const fantasyTeamWeekCounts: Record<number, number[]> = {}
+  fantasyTeams.data?.forEach((team) => {
+    fantasyTeamWeekCounts[team.fantasy_team_id] = [0, 0, 0, 0, 0]
+  })
+
+  draftPicks.data?.forEach((pick) => {
+    pick.events.forEach((event) => {
+      if (event.week >= 1 && event.week <= 5) {
+        fantasyTeamWeekCounts[pick.fantasy_team_id][event.week - 1] += 1
+      }
+    })
+  })
+
+  const weeks = [1, 2, 3, 4, 5]
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Fantasy Team</TableHead>
+          {weeks.map((w) => (
+            <TableHead key={w}>Week {w}</TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {fantasyTeams.data?.map((team) => (
+          <TableRow key={team.fantasy_team_id}>
+            <TableCell className="font-bold">{team.team_name}</TableCell>
+            {fantasyTeamWeekCounts[team.fantasy_team_id].map((count, index) => {
+              let className = ''
+              if (league.data && count >= league.data.weekly_starts) {
+                className = 'bg-green-300'
+              } else if (
+                league.data &&
+                count === league.data.weekly_starts - 1
+              ) {
+                className = 'bg-yellow-300'
+              } else {
+                className = 'bg-red-300'
+              }
+              return (
+                <TableCell key={index} className={className}>
+                  {count}
+                </TableCell>
+              )
+            })}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }
 
