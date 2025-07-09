@@ -236,7 +236,7 @@ const DraftBoardCard = ({
           : '#'
       }
       target={team?.team_picked !== '-1' ? '_blank' : '_self'}
-      className="p-2 border rounded-xl h-16 flex flex-col relative bg-slate-700 hover:bg-slate-800 cursor-pointer text-start"
+      className="p-2 border rounded-xl h-20 flex flex-col relative bg-slate-700 hover:bg-slate-800 cursor-pointer text-start"
     >
       <p className="text-xl font-bold">
         {team?.team_picked !== '-1' ? team?.team_picked : ''}
@@ -279,7 +279,7 @@ const AvailableTeamCard = ({
     <a
       href={`https://www.thebluealliance.com/team/${team.teamNumber}/${year}`}
       target="_blank"
-      className="p-2 border rounded-xl h-16 flex flex-col relative bg-slate-700 hover:bg-slate-800 cursor-pointer text-start"
+      className="p-2 border rounded-xl h-20 w-48 flex flex-col relative bg-slate-700 hover:bg-slate-800 cursor-pointer text-start"
     >
       <p className="text-xl font-bold">{team.teamNumber}</p>
       {weeks && <p className="text-sm">{weeks}</p>}
