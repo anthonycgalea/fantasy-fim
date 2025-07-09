@@ -4,6 +4,7 @@ import { useWaiverTeams } from "@/api/useWaiverTeams";
 import { useWaiverPriority } from "@/api/useWaiverPriority";
 import { WaiverPriority } from "@/types/WaiverPriority";
 import React, { useState } from "react";
+import { useTeamAvatar } from "@/api/useTeamAvatar";
 import {
   Table,
   TableHeader,
@@ -13,6 +14,39 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+
+const WaiverTeamCard = ({
+  team,
+  year,
+}: {
+  team: { teamNumber: number; teamName: string; events: { week: number }[]; epa: number | null };
+  year: number;
+}) => {
+  const teamAvatar = useTeamAvatar(team.teamNumber.toString(), year);
+  const weeks = team.events
+    .filter((e) => e.week !== 99)
+    .sort((a, b) => a.week - b.week)
+    .map((e) => e.week)
+    .join(', ');
+
+  return (
+    <a
+      href={`https://www.thebluealliance.com/team/${team.teamNumber}/${year}`}
+      target="_blank"
+      className="p-2 border rounded-xl h-20 w-48 flex flex-col relative bg-slate-700 hover:bg-slate-800 cursor-pointer text-start"
+    >
+      <p className="text-xl font-bold">{team.teamNumber}</p>
+      {weeks && <p className="text-sm">{weeks}</p>}
+      <p className="text-sm">EPA: {team.epa ?? 'N/A'}</p>
+      {teamAvatar.data?.image && (
+        <img
+          src={`data:image/png;base64,${teamAvatar.data.image}`}
+          className="aspect-square h-50% absolute bottom-0 right-0 rounded"
+        />
+      )}
+    </a>
+  );
+};
 
 export const WaiversPage = () => {
   const { leagueId } = Route.useParams();
@@ -41,74 +75,45 @@ export const WaiversPage = () => {
     if (!league.data || !waiverTeams.data) return null;
 
     const weeks = [1, 2, 3, 4, 5];
-    const teams = waiverTeams.data.map((team): {
-      teamNumber: number;
-      teamName: string;
-      events: string[];
-      yearEndEpa?: number;
-    } => {
-      const events = weeks.map((w) => {
-        const ev = team.events.find((e) => e.week === w);
-        return ev ? ev.event_key : "";
-      });
-      return {
-        teamNumber: team.team_number,
-        teamName: team.name,
-        events,
-        yearEndEpa: team.year_end_epa,
-      };
-    });
+    const prevYear = (league.data.year ?? 0) - 1;
+    const epaYear = league.data.offseason ? league.data.year : prevYear;
 
-    const filtered = league.data.is_fim
-      ? teams.filter(({ events }) =>
-          selectedWeeks.some((w) => events[w - 1] !== "")
-        )
+    const teams =
+      waiverTeams.data
+        .map((team) => ({
+          teamNumber: team.team_number,
+          teamName: team.name,
+          events: team.events,
+          epa: team.year_end_epa ?? null,
+        }))
+        .sort((a, b) => (b.epa ?? -Infinity) - (a.epa ?? -Infinity));
+
+    const filteredTeams = league.data.is_fim
+      ? teams.filter(({ events }) => events.some((e) => selectedWeeks.includes(e.week)))
       : teams;
 
-    const prevYear = league.data.year - 1;
-
     return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead rowSpan={league.data.is_fim ? 2 : 1}>Team #</TableHead>
-            <TableHead rowSpan={league.data.is_fim ? 2 : 1}>Team Name</TableHead>
-            {league.data.is_fim && <TableHead colSpan={5}>Week</TableHead>}
-            <TableHead rowSpan={league.data.is_fim ? 2 : 1}>
-              {league.data.is_fim ? prevYear : league.data.year} EPA
-            </TableHead>
-          </TableRow>
-          {league.data.is_fim && (
-            <TableRow>
-              {weeks.map((week) => (
-                <TableHead key={week}>
-                  <label className="flex items-center gap-2">
-                    <span>{week}</span>
-                    <input
-                      type="checkbox"
-                      checked={selectedWeeks.includes(week)}
-                      onChange={() => toggleWeekSelection(week)}
-                    />
-                  </label>
-                </TableHead>
-              ))}
-            </TableRow>
-          )}
-        </TableHeader>
-        <TableBody>
-          {filtered.map((team) => (
-            <TableRow key={team.teamNumber}>
-              <TableCell>{team.teamNumber}</TableCell>
-              <TableCell>{team.teamName}</TableCell>
-              {league.data.is_fim &&
-                team.events.map((ev: string, i: number) => (
-                  <TableCell key={i}>{ev}</TableCell>
-                ))}
-              <TableCell>{team.yearEndEpa ?? ''}</TableCell>
-            </TableRow>
+      <div className="my-4">
+        {league.data.is_fim && (
+          <div className="flex gap-2 mb-2">
+            {weeks.map((week) => (
+              <label key={week} className="flex items-center gap-2">
+                <span>{week}</span>
+                <input
+                  type="checkbox"
+                  checked={selectedWeeks.includes(week)}
+                  onChange={() => toggleWeekSelection(week)}
+                />
+              </label>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {filteredTeams.map((team) => (
+            <WaiverTeamCard key={team.teamNumber} team={team} year={epaYear} />
           ))}
-        </TableBody>
-      </Table>
+        </div>
+      </div>
     );
   };
 
