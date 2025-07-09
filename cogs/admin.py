@@ -115,6 +115,9 @@ class Admin(commands.Cog):
           break
         for team_year in data:
           team_number = str(team_year.get("team"))
+          if session.query(Team).filter(Team.team_number == team_number).count() == 0:
+            logger.warning(f"Skipping team {team_number} - not present in teams table")
+            continue
           unitless_epa = team_year.get("unitless_epa_end")
           if unitless_epa is None:
             epa_end = team_year.get("epa_end")
