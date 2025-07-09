@@ -187,7 +187,8 @@ const DraftBoard = () => {
                     }
                     pick={{ round: rowIndex + 1, pick: colIndex + 1 }}
                     team={pick}
-                    year={league.data?.year}
+                    displayYear={league.data?.year}
+                    epaYear={epaYear}
                   />
                 ),
               )}
@@ -206,16 +207,18 @@ const DraftBoard = () => {
 const DraftBoardCard = ({
   pick,
   team,
-  year,
+  displayYear,
+  epaYear,
 }: {
   pick: { round: number; pick: number }
   team: DraftPick | null
-  year: number
+  displayYear: number
+  epaYear: number
 }) => {
-  const teamAvatar = useTeamAvatar(team?.team_picked, year)
+  const teamAvatar = useTeamAvatar(team?.team_picked, displayYear)
   const { data: epa } = useStatboticsTeamYear(
     team?.team_picked ? Number(team.team_picked) : undefined,
-    year,
+    epaYear,
   )
   return (
     <a
@@ -223,7 +226,7 @@ const DraftBoardCard = ({
       data-pick={pick.pick}
       href={
         team?.team_picked !== '-1'
-          ? `https://www.thebluealliance.com/team/${team?.team_picked}/${year}`
+          ? `https://www.thebluealliance.com/team/${team?.team_picked}/${displayYear}`
           : '#'
       }
       target={team?.team_picked !== '-1' ? '_blank' : '_self'}
