@@ -9,6 +9,7 @@ import { useMemo, useState } from 'react'
 import { useTeamAvatar } from '@/api/useTeamAvatar'
 import { useAvailableTeams } from '@/api/useAvailableTeams'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import {
   Table,
   TableBody,
@@ -307,7 +308,9 @@ const LeagueWeeksTab = () => {
         <TableRow>
           <TableHead>Fantasy Team</TableHead>
           {weeks.map((w) => (
-            <TableHead key={w}>Week {w}</TableHead>
+            <TableHead key={w} className="text-center">
+              Week {w}
+            </TableHead>
           ))}
         </TableRow>
       </TableHeader>
@@ -328,7 +331,10 @@ const LeagueWeeksTab = () => {
                 className = 'bg-red-300'
               }
               return (
-                <TableCell key={index} className={className}>
+                <TableCell
+                  key={index}
+                  className={cn(className, 'text-black text-center')}
+                >
                   {count}
                 </TableCell>
               )
