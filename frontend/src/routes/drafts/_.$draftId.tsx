@@ -101,7 +101,7 @@ const DraftBoard = () => {
           <div className="flex gap-2 mb-2">
             {weeks.map((week) => (
               <label key={week} className="flex items-center gap-2">
-                <span>{week}</span>
+                <span>Competes Week {week}</span>
                 <input
                   type="checkbox"
                   checked={selectedWeeks.includes(week)}
@@ -192,6 +192,7 @@ const DraftBoard = () => {
               )}
             </div>
           ))}
+           <h1 className="text-3xl font-bold text-center">Available Teams</h1>
           {renderAvailableTeams()}
         </>
       )}
