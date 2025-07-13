@@ -2,6 +2,8 @@ import { createLazyFileRoute, Link } from "@tanstack/react-router";
 import { useDraft } from "@/api/useDraft";
 import { useDraftScores } from "@/api/useDraftScores";
 import { useLeague } from "@/api/useLeague";
+import { ScoreBreakdown } from "@/types/FantasyTeamScore";
+import React from "react";
 import {
   Table,
   TableBody,
@@ -55,15 +57,12 @@ export const DraftScoresPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Array.from({ length: weeklyStarts }).map((_, idx) => {
-                  const teamStarted = team.teams[idx];
-                  return (
-                    <TableRow key={idx}>
-                      <TableCell>{teamStarted?.team_number ?? ""}</TableCell>
-                      <TableCell>{teamStarted?.event_score ?? 0}</TableCell>
-                    </TableRow>
-                  );
-                })}
+                {Array.from({ length: weeklyStarts }).map((_, idx) => (
+                  <DraftTeamScoreRow
+                    key={idx}
+                    team={team.teams[idx]}
+                  />
+                ))}
               </TableBody>
               <TableFooter>
                 <TableRow>
@@ -81,6 +80,49 @@ export const DraftScoresPage = () => {
         ))}
       </div>
     </div>
+  );
+};
+
+const DraftTeamScoreRow = ({
+  team,
+}: {
+  team: { team_number: string; event_score: number; breakdown?: ScoreBreakdown } | undefined;
+}) => {
+  const [open, setOpen] = React.useState(false);
+
+  if (!team) {
+    return (
+      <TableRow>
+        <TableCell></TableCell>
+        <TableCell>0</TableCell>
+      </TableRow>
+    );
+  }
+
+  return (
+    <>
+      <TableRow
+        className={team.breakdown ? "cursor-pointer" : undefined}
+        onClick={() => team.breakdown && setOpen((o) => !o)}
+      >
+        <TableCell>{team.team_number}</TableCell>
+        <TableCell>{team.event_score}</TableCell>
+      </TableRow>
+      {open && team.breakdown && (
+        <TableRow>
+          <TableCell colSpan={2}>
+            <div className="pl-4 space-y-1 text-sm">
+              <div>Qual: {team.breakdown.qual_points}</div>
+              <div>Alliance: {team.breakdown.alliance_points}</div>
+              <div>Elim: {team.breakdown.elim_points}</div>
+              <div>Award: {team.breakdown.award_points}</div>
+              <div>Rookie: {team.breakdown.rookie_points}</div>
+              <div>Stat Corr: {team.breakdown.stat_correction}</div>
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
   );
 };
 

@@ -156,11 +156,41 @@ const TeamScoreRow = ({
 }) => {
   const teamScore = useTeamScore(leagueId, week, team);
 
+  const [open, setOpen] = React.useState(false);
+
+  if (!teamScore) {
+    return (
+      <TableRow>
+        <TableCell>{team ?? "N/A"}</TableCell>
+        <TableCell></TableCell>
+      </TableRow>
+    );
+  }
+
   return (
-    <TableRow>
-      <TableCell>{team ?? "N/A"}</TableCell>
-      <TableCell>{teamScore?.weekly_score}</TableCell>
-    </TableRow>
+    <>
+      <TableRow
+        className="cursor-pointer"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <TableCell>{team ?? "N/A"}</TableCell>
+        <TableCell>{teamScore.weekly_score}</TableCell>
+      </TableRow>
+      {open && (
+        <TableRow>
+          <TableCell colSpan={2}>
+            <div className="pl-4 space-y-1 text-sm">
+              <div>Qual: {teamScore.breakdown.qual_points}</div>
+              <div>Alliance: {teamScore.breakdown.alliance_points}</div>
+              <div>Elim: {teamScore.breakdown.elim_points}</div>
+              <div>Award: {teamScore.breakdown.award_points}</div>
+              <div>Rookie: {teamScore.breakdown.rookie_points}</div>
+              <div>Stat Corr: {teamScore.breakdown.stat_correction}</div>
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
   );
 };
 
