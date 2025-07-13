@@ -1514,6 +1514,24 @@ class Admin(commands.Cog):
         await self.scoreSingleDraft(interaction, draft.draft_id)
         await self.notifySingleDraftTask(interaction, draft.draft_id)
 
+  @app_commands.command(name="rescoredraft", description="Recalculate fantasy scores for an individual draft without pulling new event data (ADMIN)")
+  async def rescore_draft(self, interaction: discord.Interaction):
+    if (await self.verifyAdmin(interaction)):
+      await interaction.response.send_message(f"Attempting to rescore draft.")
+      response = await interaction.original_response()
+      draftCog = drafting.Drafting(self.bot)
+      draft: Draft = await draftCog.getDraftFromChannel(interaction)
+      if not draft:
+        await response.edit(content="No draft associated with this channel")
+        return
+      league: League = await draftCog.getLeague(draft.draft_id)
+      if league.is_fim:
+        await response.edit(content="Not a valid league to run rescoredraft in")
+        return
+      else:
+        await self.scoreSingleDraft(interaction, draft.draft_id)
+        await self.notifySingleDraftTask(interaction, draft.draft_id)
+
   @app_commands.command(name="addeventteams", description="Add teams to an event (use for offseasons with released team list) (ADMIN)")
   async def addEventTeams(self, interaction: discord.Interaction, teams: str):
     if (await self.verifyAdmin(interaction)):
