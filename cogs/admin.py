@@ -938,6 +938,30 @@ class Admin(commands.Cog):
     finally:
         session.close()
 
+  async def setStatCorrectionTask(self, interaction: discord.Interaction, team_number: str, event_key: str, correction: int):
+    session = await self.bot.get_session()
+    message = await interaction.original_response()
+    team_score = session.query(TeamScore).filter(TeamScore.team_key==team_number, TeamScore.event_key==event_key).first()
+    if not team_score:
+      await message.edit(content=f"TeamScore for {team_number} at {event_key} not found")
+    else:
+      team_score.stat_correction = correction
+      session.commit()
+      await message.edit(content=f"Stat correction for {team_number} at {event_key} set to {correction}")
+    session.close()
+
+  async def resetStatCorrectionTask(self, interaction: discord.Interaction, team_number: str, event_key: str):
+    session = await self.bot.get_session()
+    message = await interaction.original_response()
+    team_score = session.query(TeamScore).filter(TeamScore.team_key==team_number, TeamScore.event_key==event_key).first()
+    if not team_score:
+      await message.edit(content=f"TeamScore for {team_number} at {event_key} not found")
+    else:
+      team_score.stat_correction = 0
+      session.commit()
+      await message.edit(content=f"Stat correction for {team_number} at {event_key} reset")
+    session.close()
+
   async def verifyAdmin(self, interaction: discord.Interaction):
     session = await self.bot.get_session()
     isAdmin = session.query(Player).filter(Player.user_id==str(interaction.user.id), Player.is_admin==True).first()
@@ -1501,6 +1525,18 @@ class Admin(commands.Cog):
         await response.edit(content="No draft associated with this channel")
         return
       await self.addTeamsToEventTask(interaction, teams, draft)
+
+  @app_commands.command(name="setstatcorrection", description="Set stat correction for a team score (ADMIN)")
+  async def setStatCorrection(self, interaction: discord.Interaction, team_number: str, event_key: str, correction: int):
+    if (await self.verifyAdmin(interaction)):
+      await interaction.response.send_message(f"Setting stat correction for {team_number} at {event_key} to {correction}", ephemeral=True)
+      await self.setStatCorrectionTask(interaction, team_number, event_key, correction)
+
+  @app_commands.command(name="resetstatcorrection", description="Reset stat correction for a team score (ADMIN)")
+  async def resetStatCorrection(self, interaction: discord.Interaction, team_number: str, event_key: str):
+    if (await self.verifyAdmin(interaction)):
+      await interaction.response.send_message(f"Resetting stat correction for {team_number} at {event_key}", ephemeral=True)
+      await self.resetStatCorrectionTask(interaction, team_number, event_key)
       
   @app_commands.command(name="reassignbteam", description="Reassign B teams to different numbers (for use with offseasons) (ADMIN)")
   async def reassignBTeam(self, interaction: discord.Interaction, oldteamnumber: str, newteamnumber: str):
