@@ -29,7 +29,7 @@ export const DraftScoresPage = () => {
   const weeklyStarts = league.data?.weekly_starts ?? 0;
 
   return (
-    <div className="w-full min-w-[1000px] overflow-x-scroll overflow-y-scroll">
+    <div className="w-full overflow-x-auto">
       <div className="flex flex-col items-center">
         <h1 className="text-3xl font-bold text-center">
           {league.data?.league_name}
@@ -44,7 +44,7 @@ export const DraftScoresPage = () => {
           <Button>View Draft</Button>
         </Link>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(16rem,1fr))]">
         {scores.data?.map((team) => (
           <Card key={team.fantasy_team_id}>
             <CardHeader>{team.fantasy_team_name}</CardHeader>
