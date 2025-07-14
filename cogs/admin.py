@@ -938,6 +938,44 @@ class Admin(commands.Cog):
     finally:
         session.close()
 
+  async def moveOffseasonTeamTask(self, interaction: discord.Interaction, fantasy_team_id: int, new_league_id: int):
+    session = await self.bot.get_session()
+    message = await interaction.original_response()
+
+    fantasy_team: FantasyTeam | None = session.query(FantasyTeam).filter(FantasyTeam.fantasy_team_id == fantasy_team_id).first()
+    if not fantasy_team:
+      await message.edit(content=f"Fantasy team {fantasy_team_id} not found")
+      session.close()
+      return
+
+    old_league: League = session.query(League).filter(League.league_id == fantasy_team.league_id).first()
+    new_league: League | None = session.query(League).filter(League.league_id == new_league_id).first()
+
+    if not new_league:
+      await message.edit(content=f"League {new_league_id} not found")
+      session.close()
+      return
+
+    if not old_league.offseason or not new_league.offseason:
+      await message.edit(content="Both leagues must be offseason leagues")
+      session.close()
+      return
+
+    team_count = session.query(FantasyTeam).filter(FantasyTeam.league_id == new_league_id).count()
+    if team_count >= new_league.team_limit:
+      await message.edit(content=f"League {new_league.league_name} is at capacity")
+      session.close()
+      return
+
+    fantasy_team.league_id = new_league_id
+    session.query(TeamOwned).filter(TeamOwned.fantasy_team_id == fantasy_team_id).update({"league_id": new_league_id})
+    session.query(TeamStarted).filter(TeamStarted.fantasy_team_id == fantasy_team_id).update({"league_id": new_league_id})
+    session.query(WaiverPriority).filter(WaiverPriority.fantasy_team_id == fantasy_team_id).update({"league_id": new_league_id})
+
+    session.commit()
+    await message.edit(content=f"Moved team {fantasy_team_id} from {old_league.league_name} to {new_league.league_name}")
+    session.close()
+
   async def setStatCorrectionTask(self, interaction: discord.Interaction, team_number: str, event_key: str, correction: int):
     session = await self.bot.get_session()
     message = await interaction.original_response()
@@ -1301,6 +1339,12 @@ class Admin(commands.Cog):
       await interaction.response.send_message(f"Attempting to rename team {fantasyteamid} to {newname}.")
       manageTeamCog = manageteam.ManageTeam(self.bot)
       await manageTeamCog.renameTeamTask(interaction, fantasyId=fantasyteamid, newname=newname)
+
+  @app_commands.command(name="moveoffseasonteam", description="Move a fantasy team to another offseason league (ADMIN)")
+  async def moveOffseasonTeam(self, interaction: discord.Interaction, fantasyteamid: int, newleagueid: int):
+    if await self.verifyAdmin(interaction):
+      await interaction.response.send_message(f"Moving team {fantasyteamid} to league {newleagueid}")
+      await self.moveOffseasonTeamTask(interaction, fantasyteamid, newleagueid)
 
   @app_commands.command(name="locklineups", description="Admin ability to lock lineups for the week (ADMIN)")
   async def lockLineups(self, interaction:discord.Interaction):
