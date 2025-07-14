@@ -9,7 +9,6 @@ import { useMemo, useState } from 'react'
 import { useTeamAvatar } from '@/api/useTeamAvatar'
 import { useAvailableTeams } from '@/api/useAvailableTeams'
 import { useStatboticsTeamYear } from "@/api/useStatboticsTeamYear"
-import { useStatboticsTeamYears } from "@/api/useStatboticsTeamYears"
 import { useCurrentWeek } from "@/api/useCurrentWeek"
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -44,8 +43,7 @@ const DraftBoard = () => {
   ) {
     epaYear = currentWeek.data.week === 1 ? prevYear : league.data.year
   }
-  const teamNumbers = availableTeams.data?.map((t) => t.team_number) ?? []
-  const teamEpas = useStatboticsTeamYears(teamNumbers, epaYear)
+
 
   const [selectedWeeks, setSelectedWeeks] = useState<number[]>([1, 2, 3, 4, 5])
   const [tab, setTab] = useState<'draft' | 'leagueWeeks'>('draft')
@@ -89,13 +87,12 @@ const DraftBoard = () => {
 
     const weeks = [1, 2, 3, 4, 5]
 
-    const epas = teamEpas.data ?? {}
     const teams = availableTeams.data
       .map((team) => ({
         teamNumber: team.team_number,
         teamName: team.name,
         events: team.events,
-        epa: epas[team.team_number] ?? null,
+        epa: team.year_end_epa ?? null,
       }))
       .sort((a, b) => (b.epa ?? -Infinity) - (a.epa ?? -Infinity))
 
