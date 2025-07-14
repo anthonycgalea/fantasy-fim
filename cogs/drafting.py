@@ -308,7 +308,7 @@ class Drafting(commands.Cog):
         else:
             await message.edit(content=f"Team {team_number} has already been picked. Please try again.")
         #await self.postDraftBoard(interaction)
-        await message.channel.send(content=f"http://fantasyfim.com/drafts/{draft_id}")
+        await message.channel.send(content=f"https://fantasyfim.com/drafts/{draft_id}")
         await self.postSuggestedTeams(interaction)
         await self.notifyNextPick(interaction, draft_id=draft_id)
         if (await self.getCurrentPickTeamId(draft_id=draft_id) == '-1'):
