@@ -12,7 +12,7 @@ from sqlalchemy.sql import text
 from datetime import datetime, timedelta
 
 logger = logging.getLogger('discord')
-STATESWEEK = 6
+STATESWEEK = 7
 STATESEXTRA = 1
 MAXSTARTS = 2
 
@@ -55,7 +55,7 @@ class ManageTeam(commands.Cog):
                     TeamScore.event.has(FRCEvent.year == fTeamFirst.league.year)
                 )
             )
-            weeks = ["---" for k in range(5)]
+            weeks = ["---" for k in range(6)]
             for event in teamEvents.all():
                 frcEvent = session.query(FRCEvent).filter(FRCEvent.event_key==event.event_key).first()
                 if int(frcEvent.week) < STATESWEEK:
@@ -317,7 +317,7 @@ class ManageTeam(commands.Cog):
             .filter(TeamStarted.team_number==dropTeam).filter(TeamStarted.week >= currentWeek.week).delete()
             session.flush()
             session.query(TeamOwned).filter(TeamOwned.league_id==fantasyTeam.league_id).filter(TeamOwned.team_key==dropTeam).delete()
-            draftSoNotFail: Draft = session.query(Draft).filter(Draft.league_id==fantasyTeam.league_id).filter(Draft.event_key=="2025fim").first()
+            draftSoNotFail: Draft = session.query(Draft).filter(Draft.league_id==fantasyTeam.league_id).filter(Draft.event_key=="2026fim").first()
             session.flush()
             newTeamToAdd = TeamOwned(
                 team_key=str(addTeam),

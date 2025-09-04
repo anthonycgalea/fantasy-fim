@@ -50,7 +50,7 @@ class FantasyFiMBot(commands.Bot):
 
     async def district_update_job(self):
         adminCog = admin.Admin(self)
-        await adminCog.importFullDistrctTask(2025)
+        await adminCog.importFullDistrctTask(2026)
 
     async def get_session(self):
         Session = sessionmaker(bind=self.engine)

@@ -469,10 +469,10 @@ class Drafting(commands.Cog):
                     TeamScore.event.has(FRCEvent.year == fTeamFirst.league.year)
                 )
             )
-        weeks = ["---" for k in range(5)]
+        weeks = ["---" for k in range(6)]
         for event in teamEvents.all():
             frcEvent = session.query(FRCEvent).filter(FRCEvent.event_key==event.event_key).first()
-            if int(frcEvent.week) < 6:
+            if int(frcEvent.week) < 7:
                 if (weeks[int(frcEvent.week)-1] == "---"):
                     weeks[int(frcEvent.week)-1] = event.event_key
                 else:

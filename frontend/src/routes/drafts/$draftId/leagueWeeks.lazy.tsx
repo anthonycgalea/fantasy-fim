@@ -36,13 +36,13 @@ export const DraftLeagueWeeksPage = () => {
 
   draftPicks.data?.forEach((pick) => {
     pick.events.forEach((event) => {
-      if (event.week >= 1 && event.week <= 5) {
+      if (event.week >= 1 && event.week <= 6) {
         fantasyTeamWeekCounts[pick.fantasy_team_id][event.week - 1] += 1;
       }
     });
   });
 
-  const weeks = [1, 2, 3, 4, 5];
+  const weeks = [1, 2, 3, 4, 6];
 
   return (
     <Table>

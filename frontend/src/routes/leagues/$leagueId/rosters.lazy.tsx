@@ -147,7 +147,7 @@ const RosterWeeksTable = ({
 }) => {
   if (!rosterWeek) return null;
 
-  const weeks = [1, 2, 3, 4, 5];
+  const weeks = [1, 2, 3, 4, 6];
 
   return (
     <Table>
@@ -163,7 +163,7 @@ const RosterWeeksTable = ({
         {rosterWeek.roster.map((team) => {
           const weeklyEvents = Array(5).fill("-");
           team.events.forEach((event) => {
-            if (event.week >= 1 && event.week <= 5) {
+            if (event.week >= 1 && event.week <= 6) {
               weeklyEvents[event.week - 1] = event.event_key;
             }
           });
