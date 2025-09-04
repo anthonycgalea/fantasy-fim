@@ -442,6 +442,8 @@ class Admin(commands.Cog):
       statusesResponse = requests.get(requestURL, headers=reqheaders).json()
       for teamKey in statusesResponse.keys():
         teamJson = statusesResponse[teamKey]
+        if teamJson == None:
+          continue
         teamNum = teamKey[3:]
         teamScoreToMod: TeamScore = session.query(TeamScore).filter(TeamScore.event_key==eventKey, TeamScore.team_key==teamNum).first()
         if not teamScoreToMod:
