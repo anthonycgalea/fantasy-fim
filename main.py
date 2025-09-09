@@ -134,7 +134,7 @@ class FantasyFiMBot(commands.Bot):
         await bot.change_presence(activity=discord.Activity(
             type=discord.ActivityType.competing, name=str("Fantasy FiM!")))
         
-        # threading.Thread(target=self.run_scheduled_district_update, daemon=True).start()
+        threading.Thread(target=self.run_scheduled_district_update, daemon=True).start()
 
         logger.info("Bot startup complete!")
 
