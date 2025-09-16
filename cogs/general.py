@@ -19,7 +19,7 @@ class General(commands.Cog):
   @app_commands.command(name="ping", description="Shows the bot is active")
   async def ping(self, interaction: discord.Interaction):
     latency = round(self.bot.latency * 1000, 2)
-    await interaction.response.send_message(f"Pong! Latency: {latency}ms")
+    await interaction.response.send_message(f"Testing Pong! Latency: {latency}ms")
 
   @app_commands.command(name="leagues", description="Reports on active leagues and their league ids.")
   async def getLeagues(self, interaction: discord.Interaction):
