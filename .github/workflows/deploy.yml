@@ -75,19 +75,15 @@ jobs:
           npm run build
 
       - name: Stop frontend on server and remove old files
-        uses: appleboy/ssh-action@v0.1.8
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }} # or use private key
-          port: 22
-          script: |
-            # Stop the frontend process
-            screen -S 2018 -X stuff "^C"
-            sleep 2
-
-            # Remove old frontend files
-            rm -rf /home/frontend/*
+        env:
+          DO_HOST: ${{ secrets.DO_HOST }}
+          DO_USER: ${{ secrets.DO_USER }}
+          DO_PASS: ${{ secrets.DO_PASS }}
+        run: |
+          sshpass -p "$DO_PASS" ssh -o StrictHostKeyChecking=no $DO_USER@$DO_HOST << 'EOF'
+            screen -S 2018 -X stuff $'\003'   # sends Ctrl+C to kill current process
+            screen -S 2018 -X stuff "rm -rf /home/frontend/*$(printf '\r')"
+          EOF
 
       - name: Copy new frontend build to server
         run: |
@@ -100,7 +96,7 @@ jobs:
           DO_PASS: ${{ secrets.DO_PASS }}
         run: |
           sshpass -p "$DO_PASS" ssh -o StrictHostKeyChecking=no $DO_USER@$DO_HOST << 'EOF'
-            screen -S 2050 -X stuff "sudo find /home/frontend/build -type d -exec chmod 755 {} \;$(printf '\r')"
-            screen -S 2050 -X stuff "sudo find /home/frontend/build -type d -exec chmod 644 {} \;$(printf '\r')"
-            screen -S 2050 -X stuff "serve -s build$(printf '\r')"
+            screen -S 2018 -X stuff "sudo find /home/frontend/build -type d -exec chmod 755 {} \;$(printf '\r')"
+            screen -S 2018 -X stuff "sudo find /home/frontend/build -type d -exec chmod 644 {} \;$(printf '\r')"
+            screen -S 2018 -X stuff "serve -s build$(printf '\r')"
           EOF
