@@ -116,7 +116,10 @@ class ManageTeam(commands.Cog):
             await deferred.edit(content="Already starting max number of teams this week.")
         else:
             #get frc events in fim this week
-            frcevents = session.query(FRCEvent).filter(FRCEvent.year==league.year).filter(FRCEvent.week==week).filter(FRCEvent.is_fim==True)
+            if league.year == 2026 and week == 6:
+                frcevents = session.query(FRCEvent).filter(FRCEvent.year==league.year).filter(FRCEvent.week in [5, 6]).filter(FRCEvent.is_fim==True)
+            else:
+                frcevents = session.query(FRCEvent).filter(FRCEvent.year==league.year).filter(FRCEvent.week==week).filter(FRCEvent.is_fim==True)
             eventList = [event.event_key for event in frcevents.all()]
             #does team compete in fim this week?
             teamcompeting = session.query(TeamScore).filter(TeamScore.team_key==frcteam)\
