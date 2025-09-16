@@ -82,12 +82,12 @@ jobs:
         run: |
           sshpass -p "$DO_PASS" ssh -o StrictHostKeyChecking=no $DO_USER@$DO_HOST << 'EOF'
             screen -S 2018 -X stuff $'\003'   # sends Ctrl+C to kill current process
-            screen -S 2018 -X stuff "rm -rf build*$(printf '\r')"
+            screen -S 2018 -X stuff "rm -rf build$(printf '\r')"
           EOF
 
       - name: Copy new frontend build to server
         run: |
-          scp -r frontend/build/* ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/frontend/
+          scp -r frontend/build ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/frontend/
       
       - name: SSH into DigitalOcean, open up permissions, and restart frontend server
         env:
