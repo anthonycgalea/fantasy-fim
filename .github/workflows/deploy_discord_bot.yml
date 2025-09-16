@@ -1,0 +1,29 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: SSH into DigitalOcean and restart process
+        env:
+          DO_HOST: ${{ secrets.DO_HOST }}
+          DO_USER: ${{ secrets.DO_USER }}
+          DO_PASS: ${{ secrets.DO_PASS }}
+        run: |
+          sshpass -p "$DO_PASS" ssh -o StrictHostKeyChecking=no $DO_USER@$DO_HOST << 'EOF'
+            # Attach to screen 6525
+            screen -S 6525 -X stuff $'\003'   # sends Ctrl+C to kill current process
+            screen -S 6525 -X stuff "python3 daemon.py$(printf '\r')"
+          EOF
