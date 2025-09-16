@@ -87,7 +87,7 @@ jobs:
 
       - name: Copy new frontend build to server
         run: |
-          scp -r frontend/build ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/frontend/
+          scp -r frontend/build ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}:/home/frontend/
       
       - name: SSH into DigitalOcean, open up permissions, and restart frontend server
         env:
