@@ -198,7 +198,7 @@ class General(commands.Cog):
         return
 
     # Step 4: Check if the draft has already started
-    draft_started = session.query(Draft).filter_by(league_id=league.league_id, discord_channel=str(interaction.channel_id)).first()
+    draft_started = session.query(Draft).filter_by(league_id=league.league_id).first()
     if draft_started:
         await interaction.response.send_message("The draft for this league has already started.")
         return
