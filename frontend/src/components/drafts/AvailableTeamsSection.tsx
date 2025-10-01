@@ -78,7 +78,7 @@ const AvailableTeamsSection = ({ draftId }: AvailableTeamsSectionProps) => {
           ))}
         </div>
       )}
-      <div className="flex flex-wrap gap-2 justify-center">
+      <div className="flex flex-wrap gap-2 justify-start">
         {filteredTeams.map((team) => (
           <AvailableTeamCard key={team.teamNumber} team={team} year={epaYear} />
         ))}
