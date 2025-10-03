@@ -147,44 +147,89 @@ class Admin(commands.Cog):
   async def updateTeamsTask(self, interaction, startPage):
     embed = Embed(title="Update Team List", description="Updating team list from The Blue Alliance")
     await interaction.response.send_message(embed=embed)
+    message = await interaction.original_response()
+
     reqheaders = {"X-TBA-Auth-Key": TBA_AUTH_KEY}
     session = await self.bot.get_session()
-    teams = session.query(Team)
-    i = startPage
-    while(True):
-      try:
-        requestURL = TBA_API_ENDPOINT + "teams/" + str(i) 
-        response = requests.get(requestURL, headers=reqheaders).json()
-        if (len(response) == 0):
-          break
-        for team in response:
-          teamNumber = str(team["team_number"])
-          teamName = str(team["nickname"])
-          rookieYear = team["rookie_year"]
-          if teams.filter(Team.team_number == teamNumber).count() == 0:
-            logger.info(f"Inserting team number {teamNumber}")
-            isFiM = False
-            if (team["state_prov"] == "Michigan"):
-              isFiM = True
-            teamToAdd = Team(team_number=teamNumber, name=teamName, is_fim=isFiM)
-            session.add(teamToAdd)
-          elif not (teams.filter(Team.team_number == teamNumber).first().name == teamName\
-                    and teams.filter(Team.team_number==teamNumber).first().rookie_year==rookieYear): 
-            logger.info(f"Updating team number {teamNumber}, team name {teamName}, rookie year {rookieYear}")
-            teams.filter(Team.team_number == teamNumber).first().name = teamName
-            teams.filter(Team.team_number == teamNumber).first().rookie_year = rookieYear
-        i += 1
-        embed.description = f"Updating team list: Processed {i*500} teams (Page {i})"
-        await interaction.channel.send(embed = embed)
-        session.commit()
-      except Exception:
-        embed.description = "Error updating team list from The Blue Alliance"
-        await interaction.channel.send(embed = embed)
-        logger.error(traceback.format_exc())
-        return
-    embed.description = "Updated team list from The Blue Alliance"
-    await interaction.edit_original_response(embed = embed)
-    session.close()
+
+    try:
+      existing_teams = {
+          team.team_number: team for team in session.query(Team).all()
+      }
+      current_page = startPage
+      processed = startPage * 500
+
+      with requests.Session() as http_session:
+        while True:
+          requestURL = f"{TBA_API_ENDPOINT}teams/{current_page}"
+          try:
+            response = http_session.get(requestURL, headers=reqheaders, timeout=30)
+            response.raise_for_status()
+          except requests.RequestException:
+            embed.description = "Error updating team list from The Blue Alliance"
+            await message.edit(embed=embed)
+            logger.error(traceback.format_exc())
+            return
+
+          teams_payload = response.json()
+          if not teams_payload:
+            break
+
+          for team in teams_payload:
+            team_number = str(team.get("team_number"))
+            if not team_number:
+              continue
+
+            nickname = team.get("nickname") or team.get("name") or ""
+            rookie_year = team.get("rookie_year")
+            is_fim = team.get("state_prov") == "Michigan"
+
+            existing_team = existing_teams.get(team_number)
+
+            if existing_team is None:
+              logger.info(f"Inserting team number {team_number}")
+              new_team = Team(
+                  team_number=team_number,
+                  name=str(nickname),
+                  is_fim=is_fim,
+                  rookie_year=rookie_year,
+              )
+              session.add(new_team)
+              existing_teams[team_number] = new_team
+            else:
+              updated = False
+
+              if existing_team.name != str(nickname):
+                existing_team.name = str(nickname)
+                updated = True
+
+              if existing_team.rookie_year != rookie_year:
+                existing_team.rookie_year = rookie_year
+                updated = True
+
+              if existing_team.is_fim != is_fim:
+                existing_team.is_fim = is_fim
+                updated = True
+
+              if updated:
+                logger.info(
+                    f"Updating team number {team_number}, team name {nickname}, rookie year {rookie_year}"
+                )
+
+          current_page += 1
+          processed += len(teams_payload)
+          embed.description = f"Updating team list: Processed {processed} teams (Page {current_page})"
+          await message.edit(embed=embed)
+          session.commit()
+
+      embed.description = "Updated team list from The Blue Alliance"
+      await message.edit(embed=embed)
+    except Exception:
+      embed.description = "Error updating team list from The Blue Alliance"
+      await message.edit(embed=embed)
+      logger.error(traceback.format_exc())
+    finally:
+      session.close()
 
   async def updateEventsTask(self, interaction, year):
     embed = Embed(title="Update Event List", description=f"Updating event list for {year} from The Blue Alliance")
@@ -301,94 +346,154 @@ class Admin(commands.Cog):
         await message.channel.send(content=f"{eventKey} created!")
 
   async def importFullDistrctTask(self, year, district: str = "fim"):
-    embed = Embed(title=f"Importing {district} District", description=f"Importing event info for all {district} districts from The Blue Alliance")
-    originalMessage = await self.bot.log_message(embed = embed)
+    embed = Embed(
+        title=f"Importing {district} District",
+        description=f"Importing event info for all {district} districts from The Blue Alliance",
+    )
+    originalMessage = await self.bot.log_message(embed=embed)
     newEventsEmbed = Embed(title="New Events", description="No new events")
     eventsLog = await self.bot.log_message("New Events", "No new events")
-    TBA_AUTH_KEY = os.getenv("TBA_API_KEY")
+
     reqheaders = {"X-TBA-Auth-Key": TBA_AUTH_KEY}
     session = await self.bot.get_session()
+
     try:
-      requestURL = TBA_API_ENDPOINT + "district/" + str(year) + str(district) + "/events"
-      logger.info(requestURL)
-      response = requests.get(requestURL, headers=reqheaders).json()
-      logger.info(response)
-      if (not isinstance(response, list)):
-        embed.description = f"District {district} does not exist on The Blue Alliance"
-        await originalMessage.edit(embed=embed)
-        return
-      numberOfEvents = len(response)
-      i = 1
-      first = True
-      for event in response:
-        week=int(event["week"])+1
-        if event["event_type"] in [1,2,5]:
-          eventKey = str(event["key"])
-          eventName = str(event["name"])
-          year=eventKey[:4]
-          eventResult = session.query(FRCEvent).filter(FRCEvent.event_key == eventKey)
-          if eventResult.count() == 0:
-            if first:
-              first=False
-              newEventsEmbed.description=""
-            logger.info(f"Inserting event {eventKey}: {eventName}")
-            newEventsEmbed.description += f"Found new event {eventKey}: {eventName}\n"
-            await eventsLog.edit(embed=newEventsEmbed)
-            isFiM = district == "fim"
-            eventToAdd = FRCEvent(event_key=eventKey, event_name=eventName, year=year, week=week, is_fim=isFiM)
-            session.add(eventToAdd)
-          elif not (eventResult.first().event_name == eventName\
-                    and str(eventResult.first().year) == str(year)\
-                    and str(eventResult.first().week) == str(week)): 
-            logger.info(f"Updating event {eventKey}")
-            eventResult.first().event_name = eventName
-            eventResult.first().year = year
-            eventResult.first().week = week
-          embed.description = f"Retrieving {eventKey} teams (Event {i}/{numberOfEvents})"
+      with requests.Session() as http_session:
+        requestURL = f"{TBA_API_ENDPOINT}district/{year}{district}/events"
+        logger.info(requestURL)
+
+        response = http_session.get(requestURL, headers=reqheaders, timeout=30)
+        response.raise_for_status()
+        events_payload = response.json()
+        logger.info(events_payload)
+
+        if not isinstance(events_payload, list):
+          embed.description = f"District {district} does not exist on The Blue Alliance"
           await originalMessage.edit(embed=embed)
-          requestURL = TBA_API_ENDPOINT + "event/" + str(eventKey) + "/teams/simple"
-          response = requests.get(requestURL, headers=reqheaders).json()
-          teamscores = session.query(TeamScore).filter(TeamScore.event_key==eventKey)
-          teamlist = set()
-          teamRegistrationChangeEmbed = None
-          teamRegistrationChangeMsg = None
-          embedSentYet=False
-          for team in response:
-            teamNumber = str(team["team_number"])
-            teamlist.add(teamNumber)
-            if teamscores.filter(TeamScore.team_key == teamNumber).count() == 0:
-              if not embedSentYet:
-                teamRegistrationChangeMsg = await self.bot.log_message(f"{eventKey} registration changes", f"Team {teamNumber} registered for {eventKey}")
-                teamRegistrationChangeEmbed = Embed(title=f"{eventKey} registration changes", description=f"Team {teamNumber} registered for {eventKey}")
-                embedSentYet = True
+          return
+
+        numberOfEvents = len(events_payload)
+
+        existing_events = {
+            event.event_key: event
+            for event in session.query(FRCEvent).filter(FRCEvent.year == year).all()
+        }
+
+        first_new_event = True
+
+        for index, event in enumerate(events_payload, start=1):
+          week = int(event.get("week", 0)) + 1
+          if event.get("event_type") in [1, 2, 5]:
+            eventKey = str(event.get("key"))
+            eventName = str(event.get("name"))
+            eventYear = int(eventKey[:4])
+
+            existing_event = existing_events.get(eventKey)
+
+            if existing_event is None:
+              logger.info(f"Inserting event {eventKey}: {eventName}")
+              if first_new_event:
+                newEventsEmbed.description = ""
+                first_new_event = False
+              newEventsEmbed.description += f"Found new event {eventKey}: {eventName}\n"
+              await eventsLog.edit(embed=newEventsEmbed)
+              isFiM = district.lower() == "fim"
+              eventToAdd = FRCEvent(
+                  event_key=eventKey,
+                  event_name=eventName,
+                  year=eventYear,
+                  week=week,
+                  is_fim=isFiM,
+              )
+              session.add(eventToAdd)
+              existing_events[eventKey] = eventToAdd
+            else:
+              updated = False
+              if existing_event.event_name != eventName:
+                existing_event.event_name = eventName
+                updated = True
+              if existing_event.year != eventYear:
+                existing_event.year = eventYear
+                updated = True
+              if existing_event.week != week:
+                existing_event.week = week
+                updated = True
+              if updated:
+                logger.info(f"Updating event {eventKey}")
+
+            embed.description = f"Retrieving {eventKey} teams (Event {index}/{numberOfEvents})"
+            await originalMessage.edit(embed=embed)
+
+            teams_url = f"{TBA_API_ENDPOINT}event/{eventKey}/teams/simple"
+            teams_response = http_session.get(teams_url, headers=reqheaders, timeout=30)
+            teams_response.raise_for_status()
+            teams_payload = teams_response.json()
+
+            existing_scores = {
+                score.team_key: score
+                for score in session.query(TeamScore).filter(TeamScore.event_key == eventKey).all()
+            }
+
+            teamRegistrationChangeEmbed = None
+            teamRegistrationChangeMsg = None
+
+            for team in teams_payload:
+              teamNumber = str(team.get("team_number"))
+              if not teamNumber:
+                continue
+
+              if teamNumber not in existing_scores:
+                logger.info(f"Team {teamNumber} registered for {eventKey}")
+                session.add(TeamScore(team_key=teamNumber, event_key=eventKey))
+                change_text = f"Team {teamNumber} registered for {eventKey}"
+                if teamRegistrationChangeMsg is None:
+                  teamRegistrationChangeMsg = await self.bot.log_message(
+                      f"{eventKey} registration changes", change_text
+                  )
+                  teamRegistrationChangeEmbed = Embed(
+                      title=f"{eventKey} registration changes",
+                      description=change_text,
+                  )
+                  await teamRegistrationChangeMsg.edit(embed=teamRegistrationChangeEmbed)
+                else:
+                  teamRegistrationChangeEmbed.description += f"\n{change_text}"
+                  await teamRegistrationChangeMsg.edit(embed=teamRegistrationChangeEmbed)
               else:
-                teamRegistrationChangeEmbed.description+=f"\nTeam {teamNumber} registered for {eventKey}"
+                existing_scores.pop(teamNumber, None)
+
+            for teamNumber, teamscore in existing_scores.items():
+              logger.info(f"Team {teamNumber} un-registered from {eventKey}")
+              session.delete(teamscore)
+              change_text = f"Team {teamNumber} un-registered from {eventKey}"
+              if teamRegistrationChangeMsg is None:
+                teamRegistrationChangeMsg = await self.bot.log_message(
+                    f"{eventKey} registration changes", change_text
+                )
+                teamRegistrationChangeEmbed = Embed(
+                    title=f"{eventKey} registration changes",
+                    description=change_text,
+                )
                 await teamRegistrationChangeMsg.edit(embed=teamRegistrationChangeEmbed)
-              logger.info(f"Team {teamNumber} registered for {eventKey}")
-              teamScoreToAdd = TeamScore(team_key=teamNumber, event_key=eventKey)
-              session.add(teamScoreToAdd)
-          for team in teamscores.all():
-            if not str(team.team_key) in teamlist:
-              logger.info(f"Team {team.team_key} un-registered from {team.event_key}")
-              session.delete(team)
-              if not embedSentYet:
-                teamRegistrationChangeMsg = await self.bot.log_message(f"{eventKey} registration changes", f"Team {team.team_key} un-registered from {team.event_key}")
-                teamRegistrationChangeEmbed = Embed(title=f"{eventKey} registration changes", description=f"Team {team.team_key} un-registered from {team.event_key}")
-                embedSentYet = True
               else:
-                teamRegistrationChangeEmbed.description+=f"\nTeam {team.team_key} un-registered from {team.event_key}"
+                teamRegistrationChangeEmbed.description += f"\n{change_text}"
                 await teamRegistrationChangeMsg.edit(embed=teamRegistrationChangeEmbed)
-        i+=1
-      session.commit()
-      embed.description = f"Retrieved all {district} information"
-      await originalMessage.edit(embed=embed)
-      session.close()
-    except Exception:
-      embed.description = f"Error retrieving offseason event {eventKey} from The Blue Alliance"
+
+        session.commit()
+
+        await eventsLog.edit(embed=newEventsEmbed)
+
+        embed.description = f"Retrieved all {district} information"
+        await originalMessage.edit(embed=embed)
+    except requests.RequestException:
+      embed.description = f"Error retrieving district {district} information from The Blue Alliance"
       await originalMessage.edit(embed=embed)
       logger.error(traceback.format_exc())
+    except Exception:
+      embed.description = f"Unexpected error retrieving district {district} information"
+      await originalMessage.edit(embed=embed)
+      logger.error(traceback.format_exc())
+    finally:
       session.close()
-      return
 
   async def scoreSingularEventTask(self, interaction: discord.Interaction, eventKey: str):
     session = await self.bot.get_session()
