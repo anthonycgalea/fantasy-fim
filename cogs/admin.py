@@ -359,7 +359,7 @@ class Admin(commands.Cog):
 
     try:
       with requests.Session() as http_session:
-        requestURL = f"{TBA_API_ENDPOINT}district/{year}{district}/events"
+        requestURL = TBA_API_ENDPOINT + "district/" + str(year) + str(district) + "/events"
         logger.info(requestURL)
 
         response = http_session.get(requestURL, headers=reqheaders, timeout=30)
