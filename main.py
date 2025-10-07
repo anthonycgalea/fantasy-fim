@@ -12,6 +12,7 @@ from models.scores import PlayerAuthorized, League, FantasyTeam, WeekStatus
 import cogs.admin as admin
 import time
 import threading
+import asyncio
 
 
 load_dotenv()
@@ -45,7 +46,9 @@ class FantasyFiMBot(commands.Bot):
         while True:
             now = time.localtime()
             if now.tm_hour == 7 and now.tm_min == 0:
-                self.loop.create_task(self.district_update_job())
+                asyncio.run_coroutine_threadsafe(
+                    self.district_update_job(), self.loop
+                )
             time.sleep(60)
 
     async def district_update_job(self):
