@@ -1,21 +1,21 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import discord
 from discord.ext import commands
 from discord import Embed
-import os
 import logging
 import logging.handlers
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
 from models.base import Base
 from models.scores import PlayerAuthorized, League, FantasyTeam, WeekStatus
 import cogs.admin as admin
 import time
 import threading
 import asyncio
-
-
-load_dotenv()
 
 logger = logging.getLogger('discord')
 
