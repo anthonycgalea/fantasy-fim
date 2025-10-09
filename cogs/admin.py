@@ -20,7 +20,12 @@ from models.transactions import WaiverPriority, WaiverClaim, TeamOnWaivers, Trad
 
 logger = logging.getLogger('discord')
 TBA_API_ENDPOINT = "https://www.thebluealliance.com/api/v3/"
-TBA_AUTH_KEY = os.getenv("TBA_API_KEY")
+def get_tba_headers() -> dict:
+  auth_key = os.getenv("TBA_API_KEY")
+  if not auth_key:
+    logger.error("TBA_API_KEY environment variable is not set; cannot contact The Blue Alliance API.")
+    raise RuntimeError("TBA_API_KEY environment variable is not set")
+  return {"X-TBA-Auth-Key": auth_key}
 FORUM_CHANNEL_ID = os.getenv("DRAFT_FORUM_ID")
 STATBOTICS_ENDPOINT = "https://api.statbotics.io/v3/team_years"
 
@@ -149,7 +154,7 @@ class Admin(commands.Cog):
     await interaction.response.send_message(embed=embed)
     message = await interaction.original_response()
 
-    reqheaders = {"X-TBA-Auth-Key": TBA_AUTH_KEY}
+    reqheaders = get_tba_headers()
     session = await self.bot.get_session()
 
     try:
@@ -236,7 +241,7 @@ class Admin(commands.Cog):
     newEventsEmbed = Embed(title="New Events", description="No new events")
     eventsLog = await self.bot.log_message("New Events", "No new events")
     await interaction.response.send_message(embed=embed)
-    reqheaders = {"X-TBA-Auth-Key": TBA_AUTH_KEY}
+    reqheaders = get_tba_headers()
     session = await self.bot.get_session()
     yearevents = session.query(FRCEvent).filter(FRCEvent.year == year)
     try:
@@ -286,7 +291,7 @@ class Admin(commands.Cog):
   async def importSingleEventTask(self, interaction, eventKey):
     embed = Embed(title=f"Import Event {eventKey}", description=f"Importing event info for key {eventKey} from The Blue Alliance")
     await interaction.response.send_message(embed = embed)
-    reqheaders = {"X-TBA-Auth-Key": TBA_AUTH_KEY}
+    reqheaders = get_tba_headers()
     session = await self.bot.get_session()
     eventResult = session.query(FRCEvent).filter(FRCEvent.event_key == eventKey)
     try:
@@ -354,7 +359,7 @@ class Admin(commands.Cog):
     newEventsEmbed = Embed(title="New Events", description="No new events")
     eventsLog = await self.bot.log_message("New Events", "No new events")
 
-    reqheaders = {"X-TBA-Auth-Key": TBA_AUTH_KEY}
+    reqheaders = get_tba_headers()
     session = await self.bot.get_session()
 
     try:
@@ -505,7 +510,7 @@ class Admin(commands.Cog):
     if eventToScore and eventToScore.is_fim:
       logger.info(f"Event to score: {eventToScore.event_name}")
       requestURL = TBA_API_ENDPOINT + "event/" + eventToScore.event_key + "/district_points"
-      reqheaders = {"X-TBA-Auth-Key": TBA_AUTH_KEY}
+      reqheaders = get_tba_headers()
       eventresponse = requests.get(requestURL, headers=reqheaders).json()
       currentScores = session.query(TeamScore).filter(TeamScore.event_key==eventToScore.event_key)
       for team in eventresponse["points"]:
@@ -543,7 +548,7 @@ class Admin(commands.Cog):
     if eventToScore:
       logger.info(f"Event to score: {eventToScore.event_name}")
       requestURL = TBA_API_ENDPOINT + "event/" + eventToScore.event_key + "/teams/statuses"
-      reqheaders = {"X-TBA-Auth-Key": TBA_AUTH_KEY}
+      reqheaders = get_tba_headers()
       statusesResponse = requests.get(requestURL, headers=reqheaders).json()
       for teamKey in statusesResponse.keys():
         teamJson = statusesResponse[teamKey]
@@ -611,7 +616,7 @@ class Admin(commands.Cog):
     for event in eventsToScore.all():
       logger.info(f"Event to score: {event.event_name}")
       requestURL = TBA_API_ENDPOINT + "event/" + event.event_key + "/district_points"
-      reqheaders = {"X-TBA-Auth-Key": TBA_AUTH_KEY}
+      reqheaders = get_tba_headers()
       eventresponse = requests.get(requestURL, headers=reqheaders).json()
       currentScores = session.query(TeamScore).filter(TeamScore.event_key==event.event_key)
       for team in eventresponse["points"]:
