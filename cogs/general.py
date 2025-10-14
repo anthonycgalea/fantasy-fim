@@ -3,6 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 import logging
 import os
+import random
 from models.scores import League, FantasyTeam, WeekStatus, FantasyScores, PlayerAuthorized
 from models.transactions import WaiverPriority
 from models.draft import Draft
@@ -171,6 +172,22 @@ class General(commands.Cog):
     else:
       await interaction.channel.send(content="No league associated with this channel!")
     session.close()
+
+  @app_commands.command(name="randomize", description="Randomly pick a team from a comma-separated list")
+  @app_commands.describe(teams="Comma-separated list of team names")
+  async def randomize(self, interaction: discord.Interaction, teams: str):
+    team_list = [team.strip() for team in teams.split(",") if team.strip()]
+
+    if not team_list:
+      await interaction.response.send_message("No valid teams were provided.")
+      return
+
+    await interaction.response.send_message(
+      f"Picking a team randomly from list: {', '.join(team_list)}"
+    )
+
+    selected_team = random.choice(team_list)
+    await interaction.followup.send(f"Team Selected: **{selected_team}**")
 
   @app_commands.command(name="joindraft", description="Join an offseason draft! Can specify a team name")
   async def joinOffseasonDraft(self, interaction: discord.Interaction, teamname: str = None):
