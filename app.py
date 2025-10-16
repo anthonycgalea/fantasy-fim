@@ -1791,7 +1791,7 @@ def get_fim_event_data():
             )
             .join(StatboticsData, TeamScore.team_key == StatboticsData.team_number)
             .join(FRCEvent, TeamScore.event_key == FRCEvent.event_key)
-            .filter(StatboticsData.year == 2024, FRCEvent.year == 2026)
+            .filter(StatboticsData.year == 2025, FRCEvent.year == 2026)
             .subquery()
         )
 
