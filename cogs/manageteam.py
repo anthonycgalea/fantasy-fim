@@ -70,11 +70,23 @@ class ManageTeam(commands.Cog):
 
     async def getFantasyTeamIdFromInteraction(self, interaction: discord.Interaction):
         session = await self.bot.get_session()
+        league = session.query(League).filter(League.discord_channel == str(interaction.channel_id)).first()
+
+        if league is None:
+            draft = session.query(Draft).filter(Draft.discord_channel == str(interaction.channel_id)).first()
+            if draft:
+                league = session.query(League).filter(League.league_id == draft.league_id).first()
+
+        if league is None:
+            session.close()
+            return None
+
         largeQuery = session.query(FantasyTeam)\
             .join(PlayerAuthorized, FantasyTeam.fantasy_team_id == PlayerAuthorized.fantasy_team_id)\
             .join(League, FantasyTeam.league_id == League.league_id)\
             .filter(PlayerAuthorized.player_id == str(interaction.user.id))\
-            .filter(League.discord_channel == str(interaction.channel_id))
+            .filter(League.league_id == league.league_id)
+
         team = largeQuery.first()
         session.close()
         if team:
