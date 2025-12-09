@@ -109,9 +109,9 @@ const AvailableTeamCard = ({ team, year }: AvailableTeamCardProps) => {
       <p className="text-xl font-bold">{team.teamNumber}</p>
       {weeks && <p className="text-sm">{weeks}</p>}
       <p className="text-sm">EPA: {String(team.epa ?? 'N/A')}</p>
-      {teamAvatar.data?.image && (
+      {teamAvatar.data?.imageUrl && (
         <img
-          src={`data:image/png;base64,${teamAvatar.data.image}`}
+          src={teamAvatar.data.imageUrl}
           className="aspect-square h-50% absolute bottom-0 right-0 rounded"
         />
       )}

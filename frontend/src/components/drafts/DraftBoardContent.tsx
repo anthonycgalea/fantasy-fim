@@ -142,9 +142,9 @@ const DraftBoardCard = ({ pick, team, displayYear, epaYear }: DraftBoardCardProp
           : ''}
       </p>
       <p className="text-sm">EPA: {String(epa ?? 'N/A')}</p>
-      {teamAvatar.data?.image && (
+      {teamAvatar.data?.imageUrl && (
         <img
-          src={`data:image/png;base64,${teamAvatar.data.image}`}
+          src={teamAvatar.data.imageUrl}
           className="aspect-square h-50% absolute bottom-0 right-0 rounded"
         />
       )}
