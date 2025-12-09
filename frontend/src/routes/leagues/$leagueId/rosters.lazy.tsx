@@ -121,9 +121,9 @@ const RosterTeamCard = ({
       className="p-2 border rounded-xl h-16 flex flex-col relative bg-slate-700 hover:bg-slate-800 cursor-pointer text-start"
     >
       <p className="text-xl font-bold">{teamNumber}</p>
-      {teamAvatar.data?.image && (
+      {teamAvatar.data?.imageUrl && (
         <img
-          src={`data:image/png;base64,${teamAvatar.data.image}`}
+          src={teamAvatar.data.imageUrl}
           className="aspect-square h-1/2 absolute bottom-0 right-0 rounded"
         />
       )}
