@@ -3,6 +3,7 @@ import { useDraft } from "@/api/useDraft";
 import { useLeague } from "@/api/useLeague";
 import { useAvailableTeams } from "@/api/useAvailableTeams";
 import { useCurrentWeek } from "@/api/useCurrentWeek";
+import { useTeamAvatar } from "@/api/useTeamAvatar";
 
 type AvailableTeamsSectionProps = {
 	draftId: string;
@@ -80,6 +81,7 @@ type AvailableTeamCardProps = {
 };
 
 const AvailableTeamCard = ({ team, year }: AvailableTeamCardProps) => {
+	const teamAvatar = useTeamAvatar(team.teamNumber.toString(), year);
 	const weeks = team.events
 		.filter((event) => event.week !== 99)
 		.sort((a, b) => a.week - b.week)
@@ -94,13 +96,7 @@ const AvailableTeamCard = ({ team, year }: AvailableTeamCardProps) => {
 			<p className="text-xl font-bold">{team.teamNumber}</p>
 			{weeks && <p className="text-sm">{weeks}</p>}
 			<p className="text-sm">EPA: {String(team.epa ?? "N/A")}</p>
-			<img
-				src={`https://www.thebluealliance.com/avatar/${year}/frc${team.teamNumber}.png`}
-				className="aspect-square h-50% absolute bottom-0 right-0 rounded"
-				onError={(e) => {
-					(e.currentTarget as HTMLImageElement).style.display = "none";
-				}}
-			/>
+			{teamAvatar.data?.imageUrl && <img src={teamAvatar.data.imageUrl} className="aspect-square h-50% absolute bottom-0 right-0 rounded" />}
 		</a>
 	);
 };

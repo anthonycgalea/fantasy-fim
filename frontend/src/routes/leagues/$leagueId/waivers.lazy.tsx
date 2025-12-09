@@ -5,10 +5,12 @@ import { useWaiverPriority } from "@/api/useWaiverPriority";
 import { useCurrentWeek } from "@/api/useCurrentWeek";
 import { WaiverPriority } from "@/types/WaiverPriority";
 import { useState } from "react";
+import { useTeamAvatar } from "@/api/useTeamAvatar";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 
 const WaiverTeamCard = ({ team, year }: { team: { teamNumber: number; teamName: string; events: { week: number }[]; epa: number | null }; year: number }) => {
+	const teamAvatar = useTeamAvatar(team.teamNumber.toString(), year);
 	const weeks = team.events
 		.filter((e) => e.week !== 99)
 		.sort((a, b) => a.week - b.week)
@@ -23,13 +25,7 @@ const WaiverTeamCard = ({ team, year }: { team: { teamNumber: number; teamName: 
 			<p className="text-xl font-bold">{team.teamNumber}</p>
 			{weeks && <p className="text-sm">{weeks}</p>}
 			<p className="text-sm">EPA: {team.epa ?? "N/A"}</p>
-			<img
-				src={`https://www.thebluealliance.com/avatar/${year}/frc${team.teamNumber}.png`}
-				className="aspect-square h-50% absolute bottom-0 right-0 rounded"
-				onError={(e) => {
-					(e.currentTarget as HTMLImageElement).style.display = "none";
-				}}
-			/>
+			{teamAvatar.data?.imageUrl && <img src={teamAvatar.data.imageUrl} className="aspect-square h-50% absolute bottom-0 right-0 rounded" />}
 		</a>
 	);
 };

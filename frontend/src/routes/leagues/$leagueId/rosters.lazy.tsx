@@ -3,6 +3,7 @@ import { useRosterWeeks } from "@/api/useRosterWeeks";
 import { useRosters } from "@/api/useRosters";
 import { useFantasyTeams } from "@/api/useFantasyTeams";
 import { useLeague } from "@/api/useLeague";
+import { useTeamAvatar } from "@/api/useTeamAvatar";
 import React from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
@@ -72,6 +73,7 @@ const RostersGrid = ({ rosters, year }: { rosters: { fantasy_team_id: number; fa
 
 const RosterTeamCard = ({ teamKey, year }: { teamKey: string; year: number | undefined }) => {
 	const teamNumber = teamKey.replace("frc", "");
+	const teamAvatar = useTeamAvatar(teamKey, year);
 
 	return (
 		<a
@@ -79,13 +81,7 @@ const RosterTeamCard = ({ teamKey, year }: { teamKey: string; year: number | und
 			target="_blank"
 			className="p-2 border rounded-xl h-16 flex flex-col relative bg-slate-700 hover:bg-slate-800 cursor-pointer text-start">
 			<p className="text-xl font-bold">{teamNumber}</p>
-			<img
-				src={`https://www.thebluealliance.com/avatar/${year}/frc${team.teamNumber}.png`}
-				className="aspect-square h-50% absolute bottom-0 right-0 rounded"
-				onError={(e) => {
-					(e.currentTarget as HTMLImageElement).style.display = "none";
-				}}
-			/>
+			{teamAvatar.data?.imageUrl && <img src={teamAvatar.data.imageUrl} className="aspect-square h-1/2 absolute bottom-0 right-0 rounded" />}
 		</a>
 	);
 };

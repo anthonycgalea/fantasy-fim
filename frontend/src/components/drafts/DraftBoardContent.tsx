@@ -5,6 +5,7 @@ import { usePicks } from "@/api/usePicks";
 import { useDraftOrder } from "@/api/useDraftOrder";
 import { useFantasyTeams } from "@/api/useFantasyTeams";
 import { DraftPick } from "@/types/DraftPick";
+import { useTeamAvatar } from "@/api/useTeamAvatar";
 import { useStatboticsTeamYear } from "@/api/useStatboticsTeamYear";
 import { useCurrentWeek } from "@/api/useCurrentWeek";
 
@@ -48,8 +49,7 @@ const DraftBoardContent = ({ draftId, autoRefreshInterval }: DraftBoardContentPr
 
 	const totalPicks = draftOrderData.length * (draft.data.rounds ?? 1);
 
-	const picksArray = Array.isArray(picks.data) ? picks.data : [];
-	const draftPicks = [...picksArray, ...(Array(totalPicks - picksArray.length).fill(null) as null[])];
+	const draftPicks = [...(picks.data ?? ([] as DraftPick[])), ...(Array(totalPicks - (picks.data?.length ?? 0)).fill(null) as null[])];
 
 	const picksInRound: (DraftPick | null)[][] = [];
 	for (let i = 0; i < draftPicks.length; i += draftOrderData.length) {
@@ -95,6 +95,7 @@ type DraftBoardCardProps = {
 };
 
 const DraftBoardCard = ({ pick, team, displayYear, epaYear }: DraftBoardCardProps) => {
+	const teamAvatar = useTeamAvatar(team?.team_picked, displayYear);
 	const { data: epa } = useStatboticsTeamYear(team?.team_picked ? Number(team.team_picked) : undefined, epaYear);
 
 	return (
@@ -115,15 +116,7 @@ const DraftBoardCard = ({ pick, team, displayYear, epaYear }: DraftBoardCardProp
 					: ""}
 			</p>
 			<p className="text-sm">EPA: {String(epa ?? "N/A")}</p>
-			{team?.team_picked && team?.team_picked !== "-1" && (
-				<img
-					src={`https://www.thebluealliance.com/avatar/${displayYear}/frc${team?.team_picked}.png`}
-					className="aspect-square h-50% absolute bottom-0 right-0 rounded"
-					onError={(e) => {
-						(e.currentTarget as HTMLImageElement).style.display = "none";
-					}}
-				/>
-			)}
+			{teamAvatar.data?.imageUrl && <img src={teamAvatar.data.imageUrl} className="aspect-square h-50% absolute bottom-0 right-0 rounded" />}
 		</a>
 	);
 };
