@@ -39,7 +39,7 @@ const DraftPage = () => {
   )
 }
 
-export const Route = createFileRoute('/drafts//$draftId')({
+export const Route = createFileRoute('/drafts/_/$draftId')({
   component: DraftPage,
   validateSearch: (search: Record<string, unknown>) => {
     return {
