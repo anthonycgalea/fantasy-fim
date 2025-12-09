@@ -49,7 +49,8 @@ const DraftBoardContent = ({ draftId, autoRefreshInterval }: DraftBoardContentPr
 
 	const totalPicks = draftOrderData.length * (draft.data.rounds ?? 1);
 
-	const draftPicks = [...(picks.data ?? ([] as DraftPick[])), ...(Array(totalPicks - (picks.data?.length ?? 0)).fill(null) as null[])];
+	const picksArray = Array.isArray(picks.data) ? picks.data : [];
+	const draftPicks = [...picksArray, ...(Array(totalPicks - picksArray.length).fill(null) as null[])];
 
 	const picksInRound: (DraftPick | null)[][] = [];
 	for (let i = 0; i < draftPicks.length; i += draftOrderData.length) {
