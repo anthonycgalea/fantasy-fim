@@ -46,6 +46,7 @@ class FantasyFiMBot(commands.Bot):
             max_overflow=5,
             pool_pre_ping=True,
             pool_recycle=180,
+            connect_args={"ssl": True},
         )
         self.async_session = async_sessionmaker(self.engine, expire_on_commit=False)
 
