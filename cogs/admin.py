@@ -1443,8 +1443,12 @@ class Admin(commands.Cog):
                     f"Event with key {draft.event_key} not found."
                 )
                 return
-            # Step 2: Split the comma-separated team list
-            team_numbers = [team.strip() for team in teams.split(",")]
+            # Step 2: Split the team list (supports comma, space, or mixed separators)
+            import re
+
+            team_numbers = [
+                team.strip() for team in re.split(r"[,\s]+", teams) if team.strip()
+            ]
             # Step 3: Iterate through each team and create Team objects if they don't exist
             for team_number in team_numbers:
                 team_result = await session.execute(
@@ -1777,7 +1781,7 @@ class Admin(commands.Cog):
                 offseason=False,
                 is_fim=is_fim,
                 year=year,
-                discord_channel=threadId,
+                discord_channel=str(threadId),
                 team_size_limit=team_size_limit,
             )
             async with self.bot.async_session() as session:
@@ -1816,7 +1820,7 @@ class Admin(commands.Cog):
                 offseason=True,
                 is_fim=False,
                 year=year,
-                discord_channel=threadId,
+                discord_channel=str(threadId),
                 team_size_limit=teams_to_draft,
             )
             async with self.bot.async_session() as session:
@@ -1941,6 +1945,16 @@ class Admin(commands.Cog):
                         "No active leagues exist in current channel."
                     )
                     return
+                # Verify event exists
+                event_result = await session.execute(
+                    select(FRCEvent).where(FRCEvent.event_key == event_key)
+                )
+                event = event_result.scalars().first()
+                if not event:
+                    await interaction.response.send_message(
+                        f"Event with key `{event_key}` not found. Please create the event first."
+                    )
+                    return
                 rounds = leagues[0].team_size_limit
                 leagueid = leagues[0].league_id
                 teams_result = await session.execute(
@@ -1972,7 +1986,7 @@ class Admin(commands.Cog):
                     league_id=leagueid,
                     rounds=rounds,
                     event_key=event_key,
-                    discord_channel=threadId,
+                    discord_channel=str(threadId),
                 )
                 session.add(draftToCreate)
                 await session.commit()
@@ -2161,11 +2175,11 @@ class Admin(commands.Cog):
                 )
                 player = player_result.scalars().first()
                 if player is None:
-                    session.add(Player(user_id=user.id, is_admin=False))
+                    session.add(Player(user_id=str(user.id), is_admin=False))
                     await session.commit()
                 if not (await self.bot.verifyTeamMemberByTeamId(fantasyteamid, user)):
                     authorizeToAdd = PlayerAuthorized(
-                        fantasy_team_id=fantasyteamid, player_id=user.id
+                        fantasy_team_id=fantasyteamid, player_id=str(user.id)
                     )
                     session.add(authorizeToAdd)
                     await session.commit()

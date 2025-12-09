@@ -36,7 +36,7 @@ class FantasyFiMBot(commands.Bot):
         super().__init__(
             command_prefix="/",
             intents=discord.Intents.all(),
-            applpication_id=os.getenv("DISCORD_APPLICATION_ID"),
+            application_id=os.getenv("DISCORD_APPLICATION_ID"),
         )
 
         # Async-only engine optimized for Neon

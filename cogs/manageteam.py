@@ -1018,7 +1018,7 @@ class ManageTeam(commands.Cog):
                 result = await session.execute(stmt)
                 player = result.scalars().first()
                 if player is None:
-                    session.add(Player(user_id=user.id, is_admin=False))
+                    session.add(Player(user_id=str(user.id), is_admin=False))
                     await session.commit()
                 if await self.bot.verifyTeamMember(interaction, user):
                     await interaction.response.send_message(
@@ -1038,7 +1038,7 @@ class ManageTeam(commands.Cog):
                         )
                         return
                     authorizeToAdd = PlayerAuthorized(
-                        fantasy_team_id=fantasyteamid, player_id=user.id
+                        fantasy_team_id=fantasyteamid, player_id=str(user.id)
                     )
                     session.add(authorizeToAdd)
                     await session.commit()

@@ -6,6 +6,7 @@ import discord
 from discord import Embed, app_commands
 from discord.ext import commands
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 
 from models.draft import Draft
 from models.scores import (
@@ -74,6 +75,7 @@ class General(commands.Cog):
             stmt = (
                 select(FantasyTeam)
                 .where(FantasyTeam.league_id == leagueid)
+                .options(selectinload(FantasyTeam.waiver_priority))
                 .order_by(FantasyTeam.fantasy_team_id.asc())
             )
             result = await session.execute(stmt)
