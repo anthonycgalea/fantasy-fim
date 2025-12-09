@@ -22,7 +22,7 @@ class FRCEvent(Base):
 
   event_key: Mapped[str] = mapped_column(primary_key=True)
   event_name: Mapped[str] = mapped_column(String(255), nullable=False)
-  year: Mapped[int] = mapped_column(Integer(), nullable=False, primary_key=True)
+  year: Mapped[int] = mapped_column(Integer(), nullable=False)
   week: Mapped[int] = mapped_column(Integer(), nullable=False)
   is_fim: Mapped[bool] = mapped_column(Boolean(), nullable=False)
 
