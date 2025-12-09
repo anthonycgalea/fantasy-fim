@@ -62,7 +62,7 @@ class Admin(commands.Cog):
             message = await interaction.original_response()
             result = await session.execute(
                 select(WeekStatus)
-                .where(WeekStatus.active == True)
+                .where(WeekStatus.active)
                 .order_by(WeekStatus.year.asc(), WeekStatus.week.asc())
             )
             currentWeek = result.scalars().first()
@@ -74,7 +74,7 @@ class Admin(commands.Cog):
                 return
 
             leagues_result = await session.execute(
-                select(League).where(League.is_fim == True, League.active == True)
+                select(League).where(League.is_fim, League.active)
             )
             leagues = leagues_result.scalars().all()
 
@@ -89,7 +89,7 @@ class Admin(commands.Cog):
                     select(TeamScore.team_key)
                     .join(Team, Team.team_number == TeamScore.team_key)
                     .join(FRCEvent, TeamScore.event_key == FRCEvent.event_key)
-                    .where(Team.is_fim == True, FRCEvent.week == currentWeek.week)
+                    .where(Team.is_fim, FRCEvent.week == currentWeek.week)
                     .where(FRCEvent.year == currentWeek.year)
                 )
                 competing_teams = competing_result.all()
@@ -169,7 +169,7 @@ class Admin(commands.Cog):
                     requestURL = (
                         f"{STATBOTICS_ENDPOINT}?year={year}&limit=500&offset={offset}"
                     )
-                    response = requests.get(requestURL)
+                    response = requests.get(requestURL, timeout=30)
                     if response.status_code != 200:
                         break
                     data = response.json()
@@ -323,11 +323,13 @@ class Admin(commands.Cog):
         async with self.bot.async_session() as session:
             try:
                 requestURL = TBA_API_ENDPOINT + "events/" + str(year)
-                response = requests.get(requestURL, headers=reqheaders).json()
+                response = requests.get(
+                    requestURL, headers=reqheaders, timeout=30
+                ).json()
                 totalEvents = len(response)
                 i = 0
                 for event in response:
-                    if not event["event_type"] in [99, 100]:
+                    if event["event_type"] not in [99, 100]:
                         eventKey = str(event["key"])
                         eventName = str(event["name"])
                         if event["event_type"] in [3, 4]:
@@ -348,7 +350,7 @@ class Admin(commands.Cog):
                             eventsLog.edit(embed=newEventsEmbed)
                             isFiM = False
                             if (
-                                not event["district"] == None
+                                event["district"] is not None
                                 and event["district"]["abbreviation"] == "fim"
                             ):
                                 isFiM = True
@@ -394,8 +396,10 @@ class Admin(commands.Cog):
         async with self.bot.async_session() as session:
             try:
                 requestURL = TBA_API_ENDPOINT + "event/" + str(eventKey)
-                response = requests.get(requestURL, headers=reqheaders).json()
-                if not "key" in response.keys():
+                response = requests.get(
+                    requestURL, headers=reqheaders, timeout=30
+                ).json()
+                if "key" not in response.keys():
                     await interaction.response.send_message(
                         f"Event {eventKey} does not exist on The Blue Alliance"
                     )
@@ -431,7 +435,9 @@ class Admin(commands.Cog):
                 embed.description = f"Retrieving {eventKey} teams"
                 await interaction.edit_original_response(embed=embed)
                 requestURL += "/teams/simple"
-                response = requests.get(requestURL, headers=reqheaders).json()
+                response = requests.get(
+                    requestURL, headers=reqheaders, timeout=30
+                ).json()
                 for team in response:
                     teamNumber = str(team["team_number"])
                     score_result = await session.execute(
@@ -703,7 +709,9 @@ class Admin(commands.Cog):
                     + "/district_points"
                 )
                 reqheaders = get_tba_headers()
-                eventresponse = requests.get(requestURL, headers=reqheaders).json()
+                eventresponse = requests.get(
+                    requestURL, headers=reqheaders, timeout=30
+                ).json()
                 for team in eventresponse["points"]:
                     team_key = team[3:]
                     score_result = await session.execute(
@@ -774,10 +782,12 @@ class Admin(commands.Cog):
                     + "/teams/statuses"
                 )
                 reqheaders = get_tba_headers()
-                statusesResponse = requests.get(requestURL, headers=reqheaders).json()
+                statusesResponse = requests.get(
+                    requestURL, headers=reqheaders, timeout=30
+                ).json()
                 for teamKey in statusesResponse.keys():
                     teamJson = statusesResponse[teamKey]
-                    if teamJson == None:
+                    if teamJson is None:
                         continue
                     teamNum = teamKey[3:]
                     score_result = await session.execute(
@@ -791,7 +801,7 @@ class Admin(commands.Cog):
                         teamScoreToMod = TeamScore(team_key=teamNum, event_key=eventKey)
                         session.add(teamScoreToMod)
                         await session.flush()
-                    notCompeted = teamJson["qual"] == None
+                    notCompeted = teamJson["qual"] is None
                     if notCompeted:
                         continue
                     # TODO: fix ranking data
@@ -845,13 +855,13 @@ class Admin(commands.Cog):
             if weekStatus is None:
                 await message.edit(content="No week to score.")
                 return
-            elif weekStatus.scores_finalized == True:
+            elif weekStatus.scores_finalized:
                 await message.edit(content="Scores are already finalized.")
                 return
             events_result = await session.execute(
                 select(FRCEvent).where(
                     FRCEvent.year == year,
-                    FRCEvent.is_fim == True,
+                    FRCEvent.is_fim,
                     FRCEvent.week == week,
                 )
             )
@@ -869,7 +879,9 @@ class Admin(commands.Cog):
                     TBA_API_ENDPOINT + "event/" + event.event_key + "/district_points"
                 )
                 reqheaders = get_tba_headers()
-                eventresponse = requests.get(requestURL, headers=reqheaders).json()
+                eventresponse = requests.get(
+                    requestURL, headers=reqheaders, timeout=30
+                ).json()
                 for team in eventresponse["points"]:
                     team_key = team[3:]
                     score_result = await session.execute(
@@ -922,7 +934,7 @@ class Admin(commands.Cog):
         async with self.bot.async_session() as session:
             message = await interaction.original_response()
             leagues_result = await session.execute(
-                select(League).where(League.is_fim == True, League.year == year)
+                select(League).where(League.is_fim, League.year == year)
             )
             allLeagues = leagues_result.scalars().all()
             week_result = await session.execute(
@@ -934,7 +946,7 @@ class Admin(commands.Cog):
             if weekStatus is None:
                 await message.edit(content="No week to score.")
                 return
-            elif weekStatus.scores_finalized == True:
+            elif weekStatus.scores_finalized:
                 await message.edit(content="Scores are already finalized.")
                 return
             for league in allLeagues:
@@ -1227,7 +1239,7 @@ class Admin(commands.Cog):
                 )
                 return
             leagues_result = await session.execute(
-                select(League).where(League.is_fim == True, League.active == True)
+                select(League).where(League.is_fim, League.active)
             )
             leagues = leagues_result.scalars().all()
             for league in leagues:
@@ -1281,7 +1293,7 @@ class Admin(commands.Cog):
 
     async def notifySingleDraftTask(self, interaction: discord.Interaction, draft_id):
         async with self.bot.async_session() as session:
-            message = await interaction.original_response()
+            await interaction.original_response()
             draft_result = await session.execute(
                 select(Draft).where(Draft.draft_id == draft_id)
             )
@@ -1349,7 +1361,7 @@ class Admin(commands.Cog):
                 return
 
             leagues_result = await session.execute(
-                select(League).where(League.is_fim == True, League.active == True)
+                select(League).where(League.is_fim, League.active)
             )
             leagues = leagues_result.scalars().all()
 
@@ -1658,7 +1670,7 @@ class Admin(commands.Cog):
         async with self.bot.async_session() as session:
             admin_result = await session.execute(
                 select(Player).where(
-                    Player.user_id == str(interaction.user.id), Player.is_admin == True
+                    Player.user_id == str(interaction.user.id), Player.is_admin
                 )
             )
             isAdmin = admin_result.scalars().first()
@@ -1679,7 +1691,7 @@ class Admin(commands.Cog):
                 select(League).order_by(League.league_id.desc())
             )
             maxleague = result.scalars().first()
-            if not maxleague == None:
+            if maxleague is not None:
                 return maxleague.league_id + 1
             else:
                 return 1
@@ -1690,7 +1702,7 @@ class Admin(commands.Cog):
                 select(FantasyTeam).order_by(FantasyTeam.fantasy_team_id.desc())
             )
             maxFantasyTeam = result.scalars().first()
-            if not maxFantasyTeam == None:
+            if maxFantasyTeam is not None:
                 return maxFantasyTeam.fantasy_team_id + 1
             else:
                 return 1
@@ -1701,7 +1713,7 @@ class Admin(commands.Cog):
                 select(Draft).order_by(Draft.draft_id.desc())
             )
             maxDraft = result.scalars().first()
-            if not maxDraft == None:
+            if maxDraft is not None:
                 return maxDraft.draft_id + 1
             else:
                 return 1
@@ -1841,7 +1853,7 @@ class Admin(commands.Cog):
                 leagues = leagues_result.scalars().all()
                 if len(leagues) == 0:
                     await interaction.response.send_message(
-                        f"No leagues exist in this channel."
+                        "No leagues exist in this channel."
                     )
                     return
                 leagueid = leagues[0].league_id
@@ -1881,7 +1893,7 @@ class Admin(commands.Cog):
                 leagues = leagues_result.scalars().all()
                 if len(leagues) == 0:
                     await interaction.response.send_message(
-                        f"No league exists in this channel."
+                        "No league exists in this channel."
                     )
                     return
                 leagueid = leagues[0].league_id
@@ -1892,7 +1904,7 @@ class Admin(commands.Cog):
                 teamLimit = leagues[0].team_limit
                 if teamLimit <= len(teamsInLeague):
                     await interaction.response.send_message(
-                        f"League is at max capacity."
+                        "League is at max capacity."
                     )
                     return
                 while teamLimit > len(teamsInLeague):
@@ -1908,7 +1920,7 @@ class Admin(commands.Cog):
                         select(FantasyTeam).where(FantasyTeam.league_id == leagueid)
                     )
                     teamsInLeague = teams_result.scalars().all()
-                await interaction.response.send_message(f"Teams created successfully!.")
+                await interaction.response.send_message("Teams created successfully!.")
 
     @app_commands.command(
         name="createdraft",
@@ -1920,13 +1932,13 @@ class Admin(commands.Cog):
                 leagues_result = await session.execute(
                     select(League).where(
                         League.discord_channel == str(interaction.channel_id),
-                        League.active == True,
+                        League.active,
                     )
                 )
                 leagues = leagues_result.scalars().all()
                 if len(leagues) == 0:
                     await interaction.response.send_message(
-                        f"No active leagues exist in current channel."
+                        "No active leagues exist in current channel."
                     )
                     return
                 rounds = leagues[0].team_size_limit
@@ -1937,12 +1949,12 @@ class Admin(commands.Cog):
                 teamsInLeague = teams_result.scalars().all()
                 if len(teamsInLeague) == 0:
                     await interaction.response.send_message(
-                        f"Cannot create draft with no teams to draft"
+                        "Cannot create draft with no teams to draft"
                     )
                     return
                 if leagues[0].team_starts > rounds:
                     await interaction.response.send_message(
-                        f"Don't have enough rounds to draft!"
+                        "Don't have enough rounds to draft!"
                     )
                     return
                 forum = await self.getForum()
@@ -1969,7 +1981,7 @@ class Admin(commands.Cog):
                 )
                 # generate draft order
                 draftOrderEmbed = Embed(
-                    title=f"**Draft order**",
+                    title="**Draft order**",
                     description="```Draft Slot    Team Name (id)\n",
                 )
                 randomizedteams = [
@@ -2014,10 +2026,10 @@ class Admin(commands.Cog):
                 drafts = drafts_result.scalars().all()
                 if len(drafts) == 0:
                     await interaction.response.send_message(
-                        f"This is not an active draft channel."
+                        "This is not an active draft channel."
                     )
                     return
-                await interaction.response.send_message(f"Generating draft picks")
+                await interaction.response.send_message("Generating draft picks")
                 message = await interaction.original_response()
                 draftid = drafts[0].draft_id
                 orders_result = await session.execute(
@@ -2025,7 +2037,7 @@ class Admin(commands.Cog):
                 )
                 draftOrders = orders_result.scalars().all()
                 if len(draftOrders) == 0:
-                    await message.edit(content=f"Error generating draft picks.")
+                    await message.edit(content="Error generating draft picks.")
                     return
                 for teamDraftOrder in draftOrders:
                     for k in range(drafts[0].rounds):
@@ -2044,7 +2056,7 @@ class Admin(commands.Cog):
                         )
                         session.add(draftPickToAdd)
                 await session.commit()
-                await message.edit(content=f"Draft rounds generated!")
+                await message.edit(content="Draft rounds generated!")
             draftCog = drafting.Drafting(self.bot)
             await draftCog.postDraftBoard(interaction=interaction)
             await draftCog.notifyNextPick(interaction, draft_id=draftid)
@@ -2063,7 +2075,7 @@ class Admin(commands.Cog):
                 drafts = drafts_result.scalars().all()
                 if len(drafts) == 0:
                     await interaction.response.send_message(
-                        f"This is not a draft channel."
+                        "This is not a draft channel."
                     )
                     return
                 draftid = drafts[0].draft_id
@@ -2072,7 +2084,7 @@ class Admin(commands.Cog):
                 )
                 await session.commit()
             await interaction.response.send_message(
-                f"Successfully reset draft! Use command /startdraft to restart the draft."
+                "Successfully reset draft! Use command /startdraft to restart the draft."
             )
 
     @app_commands.command(
@@ -2192,11 +2204,11 @@ class Admin(commands.Cog):
     async def forceAutoPick(self, interaction: discord.Interaction):
         if await self.verifyAdmin(interaction):
             await interaction.response.send_message(
-                f"Attempting to force pick best available team."
+                "Attempting to force pick best available team."
             )
             draftCog = drafting.Drafting(self.bot)
             draft: Draft = await draftCog.getDraftFromChannel(interaction=interaction)
-            if draft == None:
+            if draft is None:
                 await interaction.channel.send(
                     content="No draft associated with this channel."
                 )
@@ -2333,7 +2345,7 @@ class Admin(commands.Cog):
     async def lockLineups(self, interaction: discord.Interaction):
         if await self.verifyAdmin(interaction):
             currentWeek = await self.bot.getCurrentWeek()
-            if currentWeek == None:
+            if currentWeek is None:
                 await interaction.response.send_message("No active week")
                 return
             async with self.bot.async_session() as session:
@@ -2360,7 +2372,7 @@ class Admin(commands.Cog):
     async def finishWeek(self, interaction: discord.Interaction):
         if await self.verifyAdmin(interaction):
             currentWeek = await self.bot.getCurrentWeek()
-            if currentWeek == None:
+            if currentWeek is None:
                 await interaction.response.send_message("No active week")
                 return
             await interaction.response.defer()
@@ -2391,7 +2403,7 @@ class Admin(commands.Cog):
             )
             async with self.bot.async_session() as session:
                 leagues_result = await session.execute(
-                    select(League).where(League.active == True)
+                    select(League).where(League.active)
                 )
                 leagues = leagues_result.scalars().all()
                 if len(leagues) == 0:
@@ -2434,7 +2446,7 @@ class Admin(commands.Cog):
                             channel = await self.bot.fetch_channel(
                                 int(league.discord_channel)
                             )
-                            if not channel == None:
+                            if not channel is None:
                                 await channel.send(content=reminderMessage)
 
     @app_commands.command(
@@ -2442,12 +2454,12 @@ class Admin(commands.Cog):
     )
     async def processWaivers(self, interaction: discord.Interaction):
         if await self.verifyAdmin(interaction):
-            await interaction.response.send_message(f"Attempting to process waivers")
+            await interaction.response.send_message("Attempting to process waivers")
             message = await interaction.original_response()
             week: WeekStatus = await self.bot.getCurrentWeek()
             async with self.bot.async_session() as session:
                 leagues_result = await session.execute(
-                    select(League).where(League.active == True)
+                    select(League).where(League.active)
                 )
                 leagues = leagues_result.scalars().all()
                 if len(leagues) == 0:
@@ -2624,7 +2636,7 @@ class Admin(commands.Cog):
                         channel = await self.bot.fetch_channel(
                             int(league.discord_channel)
                         )
-                        if not channel == None:
+                        if not channel is None:
                             await channel.send(embed=waiverReportEmbed)
                         await session.execute(
                             delete(TeamOnWaivers).where(
@@ -2736,7 +2748,7 @@ class Admin(commands.Cog):
     @app_commands.command(name="scoredraft", description="Score an individual draft")
     async def score_draft(self, interaction: discord.Interaction):
         if await self.verifyAdmin(interaction):
-            await interaction.response.send_message(f"Attempting to score draft.")
+            await interaction.response.send_message("Attempting to score draft.")
             response = await interaction.original_response()
             draftCog = drafting.Drafting(self.bot)
             draft: Draft = await draftCog.getDraftFromChannel(interaction)
@@ -2761,7 +2773,7 @@ class Admin(commands.Cog):
     )
     async def rescore_draft(self, interaction: discord.Interaction):
         if await self.verifyAdmin(interaction):
-            await interaction.response.send_message(f"Attempting to rescore draft.")
+            await interaction.response.send_message("Attempting to rescore draft.")
             response = await interaction.original_response()
             draftCog = drafting.Drafting(self.bot)
             draft: Draft = await draftCog.getDraftFromChannel(interaction)

@@ -59,7 +59,7 @@ class FantasyFiMBot(commands.Bot):
     ):
         logChannel = await self.fetch_channel(int(os.getenv("LOGGING_CHANNEL_ID")))
         embed = Embed(title=f"{title}", description=f"{message}")
-        if not embed == None:
+        if not embed is None:
             embed = embed
         return await logChannel.send(embed=embed)
 
@@ -141,7 +141,7 @@ class FantasyFiMBot(commands.Bot):
         async with self.async_session() as session:
             stmt = (
                 select(WeekStatus)
-                .where(WeekStatus.active == True)
+                .where(WeekStatus.active)
                 .order_by(WeekStatus.year.asc(), WeekStatus.week.asc())
             )
             result = await session.execute(stmt)

@@ -205,7 +205,7 @@ class ManageTeam(commands.Cog):
                 stmt = select(FRCEvent).where(
                     FRCEvent.year == league.year,
                     FRCEvent.week == week,
-                    FRCEvent.is_fim == True,
+                    FRCEvent.is_fim,
                 )
                 result = await session.execute(stmt)
                 frcevents = result.scalars().all()
@@ -474,7 +474,7 @@ class ManageTeam(commands.Cog):
         async with self.bot.async_session() as session:
             message = await interaction.original_response()
             currentWeek = await self.bot.getCurrentWeek()
-            if currentWeek.lineups_locked == True:
+            if currentWeek.lineups_locked:
                 await message.edit(
                     content="Cannot make transaction with locked lineups."
                 )
@@ -505,9 +505,7 @@ class ManageTeam(commands.Cog):
             result = await session.execute(stmt)
             teamAddOwnedByOther = result.scalars().first()
 
-            stmt = select(Team).where(
-                Team.team_number == str(addTeam), Team.is_fim == True
-            )
+            stmt = select(Team).where(Team.team_number == str(addTeam), Team.is_fim)
             result = await session.execute(stmt)
             teamInFiM = result.scalars().first()
 
@@ -612,7 +610,7 @@ class ManageTeam(commands.Cog):
                 await originalMessage.edit(content=f"You do not own team {dropTeam}.")
             # check if already made exact waiver claim
             elif waiverClaimAlreadyMade is not None:
-                await originalMessage.edit(content=f"You have already made this claim!")
+                await originalMessage.edit(content="You have already made this claim!")
             # create waiver claim
             else:
                 newPriority = await self.getWaiverClaimPriority(fantasyId)
@@ -648,7 +646,7 @@ class ManageTeam(commands.Cog):
             )
             if claimToCancel is None:
                 await originalMessage.edit(
-                    content=f"You do not have a claim with this priority!"
+                    content="You do not have a claim with this priority!"
                 )
             # create waiver claim
             else:
@@ -699,7 +697,7 @@ class ManageTeam(commands.Cog):
             proposed_to_team: FantasyTeam = result.scalars().first()
 
             if not proposer_team and not proposed_to_team:
-                await originalMessage.edit(content=f"Invalid fantasy team ID provided.")
+                await originalMessage.edit(content="Invalid fantasy team ID provided.")
                 return
             expiration_time = datetime.now() + timedelta(hours=1)
 
@@ -846,18 +844,18 @@ class ManageTeam(commands.Cog):
             result = await session.execute(stmt)
             proposalObj = result.scalars().first()
             currentWeek = await self.bot.getCurrentWeek()
-            if currentWeek.lineups_locked == True and not force:
+            if currentWeek.lineups_locked and not force:
                 await message.edit("Cannot accept a trade while lineups are locked!")
                 return
             if force or proposalObj is not None:
                 stmt = select(TradeTeams).where(
-                    TradeTeams.trade_id == tradeId, TradeTeams.is_offered == True
+                    TradeTeams.trade_id == tradeId, TradeTeams.is_offered
                 )
                 result = await session.execute(stmt)
                 offeredTeamsList = result.scalars().all()
 
                 stmt = select(TradeTeams).where(
-                    TradeTeams.trade_id == tradeId, TradeTeams.is_offered == False
+                    TradeTeams.trade_id == tradeId, not TradeTeams.is_offered
                 )
                 result = await session.execute(stmt)
                 requestedTeamsList = result.scalars().all()
@@ -955,7 +953,7 @@ class ManageTeam(commands.Cog):
             "Collecting fantasy team board", ephemeral=True
         )
         teamId = await self.getFantasyTeamIdFromInteraction(interaction=interaction)
-        if not teamId == None:
+        if teamId is not None:
             await self.postTeamBoard(interaction, teamId)
         else:
             message = await interaction.original_response()
@@ -972,7 +970,7 @@ class ManageTeam(commands.Cog):
         )
         originalResponse = await interaction.original_response()
         teamId = await self.getFantasyTeamIdFromInteraction(interaction)
-        if teamId == None:
+        if teamId is None:
             await originalResponse.edit(content="You are not in this league!")
             return
         else:
@@ -989,7 +987,7 @@ class ManageTeam(commands.Cog):
         )
         originalResponse = await interaction.original_response()
         teamId = await self.getFantasyTeamIdFromInteraction(interaction)
-        if teamId == None:
+        if teamId is None:
             await originalResponse.edit(content="You are not in this league!")
             return
         else:
@@ -1064,7 +1062,7 @@ class ManageTeam(commands.Cog):
         )
         originalResponse = await interaction.original_response()
         teamId = await self.getFantasyTeamIdFromInteraction(interaction)
-        if teamId == None:
+        if teamId is None:
             await originalResponse.edit(content="You are not in this league!")
             return
         elif self.isEnglish(newname):
@@ -1084,7 +1082,7 @@ class ManageTeam(commands.Cog):
         )
         originalResponse = await interaction.original_response()
         teamId = await self.getFantasyTeamIdFromInteraction(interaction)
-        if teamId == None:
+        if teamId is None:
             await originalResponse.edit(content="You are not in this league!")
             return
         else:
@@ -1095,11 +1093,11 @@ class ManageTeam(commands.Cog):
     @app_commands.command(name="lineup", description="View your starting lineups")
     async def startingLineups(self, interaction: discord.Interaction):
         await interaction.response.send_message(
-            f"Retrieving starting lineups...", ephemeral=True
+            "Retrieving starting lineups...", ephemeral=True
         )
         originalResponse = await interaction.original_response()
         teamId = await self.getFantasyTeamIdFromInteraction(interaction)
-        if teamId == None:
+        if teamId is None:
             await originalResponse.edit(content="You are not in this league!")
             return
         else:
@@ -1117,7 +1115,7 @@ class ManageTeam(commands.Cog):
         )
         originalResponse = await interaction.original_response()
         teamId = await self.getFantasyTeamIdFromInteraction(interaction)
-        if teamId == None:
+        if teamId is None:
             await originalResponse.edit(content="You are not in this league!")
             return
         else:
@@ -1128,11 +1126,11 @@ class ManageTeam(commands.Cog):
     )
     async def viewMyClaims(self, interaction: discord.Interaction):
         await interaction.response.send_message(
-            f"Retrieving your claims", ephemeral=True
+            "Retrieving your claims", ephemeral=True
         )
         originalResponse = await interaction.original_response()
         teamId = await self.getFantasyTeamIdFromInteraction(interaction)
-        if teamId == None:
+        if teamId is None:
             await originalResponse.edit(content="You are not in this league!")
             return
         else:
@@ -1147,7 +1145,7 @@ class ManageTeam(commands.Cog):
         )
         originalResponse = await interaction.original_response()
         teamId = await self.getFantasyTeamIdFromInteraction(interaction)
-        if teamId == None:
+        if teamId is None:
             await originalResponse.edit(content="You are not in this league!")
             return
         else:
@@ -1168,7 +1166,7 @@ class ManageTeam(commands.Cog):
         )
         originalResponse = await interaction.original_response()
         teamId = await self.getFantasyTeamIdFromInteraction(interaction)
-        if teamId == None:
+        if teamId is None:
             await originalResponse.edit(content="You are not in this league!")
             return
         else:
@@ -1181,7 +1179,7 @@ class ManageTeam(commands.Cog):
         await interaction.response.send_message("Declining trade...", ephemeral=True)
         originalResponse = await interaction.original_response()
         teamId = await self.getFantasyTeamIdFromInteraction(interaction)
-        if teamId == None:
+        if teamId is None:
             await originalResponse.edit(content="You are not in this league!")
             return
         else:
@@ -1192,7 +1190,7 @@ class ManageTeam(commands.Cog):
         await interaction.response.send_message("Accepting trade...", ephemeral=True)
         originalResponse = await interaction.original_response()
         teamId = await self.getFantasyTeamIdFromInteraction(interaction)
-        if teamId == None:
+        if teamId is None:
             await originalResponse.edit(content="You are not in this league!")
             return
         else:

@@ -132,7 +132,7 @@ def get_current_week():
         with Session() as session:
             week = (
                 session.query(WeekStatus)
-                .filter(WeekStatus.active == True)
+                .filter(WeekStatus.active)
                 .order_by(WeekStatus.year.asc(), WeekStatus.week.asc())
                 .first()
             )
@@ -195,7 +195,7 @@ def get_leagues():
     """
     try:
         with Session() as session:
-            leagues = session.query(League).filter(League.active == True).all()
+            leagues = session.query(League).filter(League.active).all()
 
             return jsonify(
                 [
@@ -261,7 +261,7 @@ def get_league(leagueId):
         with Session() as session:
             league = (
                 session.query(League)
-                .filter(League.active == True, League.league_id == leagueId)
+                .filter(League.active, League.league_id == leagueId)
                 .first()
             )
             if not league:
@@ -1362,9 +1362,7 @@ def get_league_rankings(leagueId):
             # Query for the weeks with finalized scores for the league's year
             finalized_weeks = (
                 session.query(WeekStatus)
-                .filter(
-                    WeekStatus.year == league.year, WeekStatus.scores_finalized == True
-                )
+                .filter(WeekStatus.year == league.year, WeekStatus.scores_finalized)
                 .all()
             )
 
@@ -1898,7 +1896,9 @@ def get_available_teams_fim(leagueId):
 @app.route("/api/team-avatar/<team_number>/year/<year>", methods=["GET"])
 def get_team_avatar(team_number, year):
     requestURL = TBA_API_ENDPOINT + f"team/frc{team_number}/media/{year}"
-    response = requests.get(requestURL, headers={"X-TBA-Auth-Key": TBA_AUTH_KEY}).json()
+    response = requests.get(
+        requestURL, headers={"X-TBA-Auth-Key": TBA_AUTH_KEY}, timeout=30
+    ).json()
 
     if len(response) == 0:
         return jsonify({"team_number": team_number, "image": None})
