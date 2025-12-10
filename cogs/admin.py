@@ -523,7 +523,7 @@ class Admin(commands.Cog):
                     numberOfEvents = len(events_payload)
 
                     events_result = await session.execute(
-                        select(FRCEvent).where(FRCEvent.year == year)
+                        select(FRCEvent).where(FRCEvent.year == int(year))
                     )
                     existing_events = {
                         event.event_key: event
