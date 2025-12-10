@@ -31,7 +31,7 @@ export const DraftLeagueWeeksPage = () => {
 
   const fantasyTeamWeekCounts: Record<number, number[]> = {};
   fantasyTeams.data?.forEach((team) => {
-    fantasyTeamWeekCounts[team.fantasy_team_id] = [0, 0, 0, 0, 0];
+    fantasyTeamWeekCounts[team.fantasy_team_id] = [0, 0, 0, 0, 0, 0];
   });
 
   draftPicks.data?.forEach((pick) => {
@@ -42,7 +42,7 @@ export const DraftLeagueWeeksPage = () => {
     });
   });
 
-  const weeks = [1, 2, 3, 4, 6];
+  const weeks: (number | string)[] = [1, 2, 3, 4, "5+6"];
 
   return (
     <Table>
@@ -60,7 +60,11 @@ export const DraftLeagueWeeksPage = () => {
         {fantasyTeams.data?.map((team) => (
           <TableRow key={team.fantasy_team_id}>
             <TableCell className="font-bold">{team.team_name}</TableCell>
-            {fantasyTeamWeekCounts[team.fantasy_team_id].map((count, index) => {
+            {weeks.map((_, index) => {
+              const counts = fantasyTeamWeekCounts[team.fantasy_team_id];
+              const count =
+                index < 4 ? counts[index] : counts[4] + counts[5];
+
               let className = "";
               if (league.data && count >= league.data.weekly_starts) {
                 className = "bg-green-300";
