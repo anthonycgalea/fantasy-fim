@@ -2066,7 +2066,7 @@ class Admin(commands.Cog):
                             draft_id=draftid,
                             fantasy_team_id=teamDraftOrder.fantasy_team_id,
                             pick_number=pickNumber,
-                            team_number=-1,
+                            team_number="-1",
                         )
                         session.add(draftPickToAdd)
                 await session.commit()
