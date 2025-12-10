@@ -9,10 +9,10 @@ type AvailableTeamsSectionProps = {
 	draftId: string;
 };
 
-const weekOptions = [1, 2, 3, 4, 6];
+const weekOptions = [1, 2, 3, 4, 5, 6];
 
 const AvailableTeamsSection = ({ draftId }: AvailableTeamsSectionProps) => {
-	const [selectedWeeks, setSelectedWeeks] = useState<number[]>([1, 2, 3, 4, 6]);
+        const [selectedWeeks, setSelectedWeeks] = useState<number[]>(weekOptions);
 	const draft = useDraft(draftId);
 	const leagueId = draft.data?.league_id?.toString();
 	const league = useLeague(leagueId);
