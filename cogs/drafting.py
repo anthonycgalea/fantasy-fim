@@ -7,6 +7,7 @@ from discord import Embed, app_commands
 from discord.ext import commands
 from discord.ui import Button, View
 from sqlalchemy import Integer, select
+from sqlalchemy.orm import selectinload
 
 from models.draft import Draft, DraftOrder, DraftPick, StatboticsData
 from models.scores import (
@@ -588,6 +589,11 @@ class Drafting(commands.Cog):
                 select(DraftOrder)
                 .where(DraftOrder.draft_id == draft_id)
                 .order_by(DraftOrder.draft_slot.desc())
+                .options(
+                    selectinload(DraftOrder.fantasyTeam).selectinload(
+                        FantasyTeam.league
+                    )
+                )
             )
             result = await session.execute(stmt)
             draftOrders = result.scalars().all()
