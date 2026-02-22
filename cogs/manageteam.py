@@ -312,7 +312,11 @@ class ManageTeam(commands.Cog):
                     content="Please contact a fantasy admin to sit your team. You are starting them at multiple FiM events this week which is a special case."
                 )
             else:
-                event: FRCEvent = teamstarted[0].event
+                stmt = select(FRCEvent).where(
+                    FRCEvent.event_key == teamstarted[0].event_key
+                )
+                result = await session.execute(stmt)
+                event: FRCEvent = result.scalars().first()
                 stmt = delete(TeamStarted).where(
                     TeamStarted.team_number == frcteam,
                     TeamStarted.league_id == league.league_id,
@@ -321,8 +325,9 @@ class ManageTeam(commands.Cog):
                 )
                 await session.execute(stmt)
                 await session.commit()
+                event_name = event.event_name if event else "unknown event"
                 await deferred.edit(
-                    content=f"{fantasyteam.fantasy_team_name} is sitting team {frcteam} competing at {event.event_name} in week {week}."
+                    content=f"{fantasyteam.fantasy_team_name} is sitting team {frcteam} competing at {event_name} in week {week}."
                 )
 
     async def setLineupTask(
