@@ -6,6 +6,7 @@ import discord
 from discord import Embed, app_commands
 from discord.ext import commands
 from sqlalchemy import delete, func, select
+from sqlalchemy.orm import selectinload
 
 from models.draft import Draft
 from models.scores import (
@@ -841,6 +842,10 @@ class ManageTeam(commands.Cog):
                 TradeProposal.proposed_to_team_id == fantasyId,
                 TradeProposal.trade_id == tradeId,
             )
+            stmt = stmt.options(
+                selectinload(TradeProposal.proposer_team),
+                selectinload(TradeProposal.proposed_to_team),
+            )
             result = await session.execute(stmt)
             proposalObj = result.scalars().first()
             currentWeek = await self.bot.getCurrentWeek()
@@ -855,7 +860,7 @@ class ManageTeam(commands.Cog):
                 offeredTeamsList = result.scalars().all()
 
                 stmt = select(TradeTeams).where(
-                    TradeTeams.trade_id == tradeId, not TradeTeams.is_offered
+                    TradeTeams.trade_id == tradeId, TradeTeams.is_offered.is_(False)
                 )
                 result = await session.execute(stmt)
                 requestedTeamsList = result.scalars().all()
