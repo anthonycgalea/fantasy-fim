@@ -147,9 +147,15 @@ class ManageTeam(commands.Cog):
                 return None
 
     async def startTeamTask(
-        self, interaction: discord.Interaction, frcteam: str, week: int, fantasyId: int
+        self,
+        interaction: discord.Interaction,
+        frcteam: str,
+        week: int,
+        fantasyId: int,
+        update_response: bool = True,
     ):
         deferred = await interaction.original_response()
+        result_message = ""
         async with self.bot.async_session() as session:
             stmt = select(FantasyTeam).where(FantasyTeam.fantasy_team_id == fantasyId)
             result = await session.execute(stmt)
@@ -160,8 +166,10 @@ class ManageTeam(commands.Cog):
             league: League = result.scalars().first()
             # is this a fim season long league?
             if not league.is_fim:
-                await deferred.edit(content="This league does not support starts/sits.")
-                return
+                result_message = "This league does not support starts/sits."
+                if update_response:
+                    await deferred.edit(content=result_message)
+                return result_message
 
             # Check if lineups are locked for the given week in this league
             stmt = select(WeekStatus).where(
@@ -171,10 +179,12 @@ class ManageTeam(commands.Cog):
             week_status = result.scalars().first()
 
             if week_status and week_status.lineups_locked:
-                await deferred.edit(
-                    content="Lineups are locked for this week, you cannot modify your lineup at this time."
+                result_message = (
+                    "Lineups are locked for this week, you cannot modify your lineup at this time."
                 )
-                return
+                if update_response:
+                    await deferred.edit(content=result_message)
+                return result_message
             # do you own the team?
             stmt = select(TeamOwned).where(
                 TeamOwned.team_key == frcteam,
@@ -184,8 +194,10 @@ class ManageTeam(commands.Cog):
             result = await session.execute(stmt)
             teamowned = result.scalars().first()
             if teamowned is None:
-                await deferred.edit(content="You do not own this team.")
-                return
+                result_message = "You do not own this team."
+                if update_response:
+                    await deferred.edit(content=result_message)
+                return result_message
 
             stmt = select(TeamStarted).where(
                 TeamStarted.fantasy_team_id == fantasyId, TeamStarted.week == week
@@ -198,9 +210,7 @@ class ManageTeam(commands.Cog):
                 league.team_starts + STATESEXTRA <= teamsStartedCount
                 and week == STATESWEEK
             ):
-                await deferred.edit(
-                    content="Already starting max number of teams this week."
-                )
+                result_message = "Already starting max number of teams this week."
             else:
                 # get frc events in fim this week
                 stmt = select(FRCEvent).where(
@@ -235,19 +245,15 @@ class ManageTeam(commands.Cog):
                 teamStartedCount = result.scalar()
 
                 if len(teamcompeting) == 0:
-                    await deferred.edit(content="This team is not competing this week!")
+                    result_message = "This team is not competing this week!"
                 elif len(teamcompeting) > 1:
-                    await deferred.edit(
-                        content="Please contact a fantasy admin to start your team. They are competing at multiple FiM events this week which is a special case."
+                    result_message = (
+                        "Please contact a fantasy admin to start your team. They are competing at multiple FiM events this week which is a special case."
                     )
                 elif alreadyStarting > 0:
-                    await deferred.edit(
-                        content="This team is already starting this week!"
-                    )
+                    result_message = "This team is already starting this week!"
                 elif not week == STATESWEEK and teamStartedCount >= MAXSTARTS:
-                    await deferred.edit(
-                        content=f"This team may not be started again until States, they have reached the maximum of {MAXSTARTS}"
-                    )
+                    result_message = f"This team may not be started again until States, they have reached the maximum of {MAXSTARTS}"
                 else:
                     eventkey = teamcompeting[0].event_key
                     stmt = select(FRCEvent).where(FRCEvent.event_key == eventkey)
@@ -262,9 +268,14 @@ class ManageTeam(commands.Cog):
                     )
                     session.add(teamStartedToAdd)
                     await session.commit()
-                    await deferred.edit(
-                        content=f"{fantasyteam.fantasy_team_name} is starting team {frcteam} competing at {frcevent.event_name} in week {week}!"
+                    result_message = (
+                        f"{fantasyteam.fantasy_team_name} is starting team {frcteam} competing at {frcevent.event_name} in week {week}!"
                     )
+
+            if update_response:
+                await deferred.edit(content=result_message)
+
+            return result_message
 
     async def sitTeamTask(
         self, interaction: discord.Interaction, frcteam: str, week: int, fantasyId: int
@@ -374,10 +385,21 @@ class ManageTeam(commands.Cog):
             await session.commit()
 
         # start each team provided
+        results = []
         for team in teams:
-            await self.startTeamTask(
-                interaction, frcteam=team, week=week, fantasyId=fantasyId
+            result = await self.startTeamTask(
+                interaction,
+                frcteam=team,
+                week=week,
+                fantasyId=fantasyId,
+                update_response=False,
             )
+            results.append(f"{team}: {result}")
+
+        if len(results) == 0:
+            await deferred.edit(content="No teams provided.")
+        else:
+            await deferred.edit(content="\n".join(results))
 
     async def renameTeamTask(
         self, interaction: discord.Interaction, newname: str, fantasyId: int
