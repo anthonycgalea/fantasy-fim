@@ -397,13 +397,21 @@ class ManageTeam(commands.Cog):
     async def viewStartsTask(self, interaction: discord.Interaction, fantasyId: int):
         async with self.bot.async_session() as session:
             # retrieve league starts data
-            stmt = select(FantasyTeam).where(FantasyTeam.fantasy_team_id == fantasyId)
+            stmt = (
+                select(FantasyTeam)
+                .where(FantasyTeam.fantasy_team_id == fantasyId)
+                .options(selectinload(FantasyTeam.league))
+            )
             result = await session.execute(stmt)
             fantasyteam: FantasyTeam = result.scalars().first()
             league: League = fantasyteam.league
             teamsToStart = league.team_starts
             # retrieve teamstarted for team
-            stmt = select(TeamStarted).where(TeamStarted.fantasy_team_id == fantasyId)
+            stmt = (
+                select(TeamStarted)
+                .where(TeamStarted.fantasy_team_id == fantasyId)
+                .options(selectinload(TeamStarted.team))
+            )
             result = await session.execute(stmt)
             teamsStarted = result.scalars().all()
             # for every week
