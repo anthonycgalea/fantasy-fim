@@ -10,6 +10,7 @@ import requests
 from discord import Embed, app_commands
 from discord.ext import commands
 from sqlalchemy import delete, or_, select, update
+from sqlalchemy.orm import selectinload
 
 import cogs.drafting as drafting
 import cogs.manageteam as manageteam
@@ -1245,6 +1246,7 @@ class Admin(commands.Cog):
             for league in leagues:
                 scores_result = await session.execute(
                     select(FantasyScores)
+                    .options(selectinload(FantasyScores.fantasyTeam))
                     .where(
                         FantasyScores.league_id == league.league_id,
                         FantasyScores.week == week,
@@ -1309,6 +1311,7 @@ class Admin(commands.Cog):
             if league:
                 scores_result = await session.execute(
                     select(FantasyScores)
+                    .options(selectinload(FantasyScores.fantasyTeam))
                     .where(
                         FantasyScores.league_id == league.league_id,
                         FantasyScores.event_key == frcEvent.event_key,
