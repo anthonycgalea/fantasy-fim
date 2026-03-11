@@ -2499,6 +2499,7 @@ class Admin(commands.Cog):
                             waiverPriorities_result = await session.execute(
                                 select(WaiverPriority)
                                 .where(WaiverPriority.league_id == league.league_id)
+                                .options(selectinload(WaiverPriority.fantasy_team))
                                 .order_by(WaiverPriority.priority.asc())
                             )
                             waiverPrioritiesList = (
@@ -2509,6 +2510,7 @@ class Admin(commands.Cog):
                                 waiverPriorities_result = await session.execute(
                                     select(WaiverPriority)
                                     .where(WaiverPriority.league_id == league.league_id)
+                                    .options(selectinload(WaiverPriority.fantasy_team))
                                     .order_by(WaiverPriority.priority.asc())
                                 )
                                 waiverPrioritiesList = (
