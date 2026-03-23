@@ -859,17 +859,25 @@ class Admin(commands.Cog):
             elif weekStatus.scores_finalized:
                 await message.edit(content="Scores are already finalized.")
                 return
+            event_weeks = [week]
+            # 2026 special case: week 5 scoring should also pull week 6 events.
+            if year == 2026 and week == 5:
+                event_weeks.append(6)
+
             events_result = await session.execute(
                 select(FRCEvent).where(
                     FRCEvent.year == year,
                     FRCEvent.is_fim,
-                    FRCEvent.week == week,
+                    FRCEvent.week.in_(event_weeks),
                 )
             )
             eventsToScore = events_result.scalars().all()
+            scored_weeks_text = (
+                "weeks 5 and 6" if year == 2026 and week == 5 else f"week {week}"
+            )
             embed = Embed(
                 title=f"Scoring week {week} for {year}",
-                description=f"Importing event info for all {year} week {week} districts from The Blue Alliance",
+                description=f"Importing event info for all {year} {scored_weeks_text} districts from The Blue Alliance",
             )
             await message.edit(content="", embed=embed)
             embed.description = ""
