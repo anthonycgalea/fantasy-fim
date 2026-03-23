@@ -213,9 +213,14 @@ class ManageTeam(commands.Cog):
                 result_message = "Already starting max number of teams this week."
             else:
                 # get frc events in fim this week
+                event_weeks = [week]
+                # 2026 special case: for week 5 lineups, allow teams competing in week 6.
+                if league.year == 2026 and week == 5:
+                    event_weeks.append(6)
+
                 stmt = select(FRCEvent).where(
                     FRCEvent.year == league.year,
-                    FRCEvent.week == week,
+                    FRCEvent.week.in_(event_weeks),
                     FRCEvent.is_fim,
                 )
                 result = await session.execute(stmt)
