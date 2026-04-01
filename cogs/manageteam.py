@@ -185,6 +185,13 @@ class ManageTeam(commands.Cog):
                 if update_response:
                     await deferred.edit(content=result_message)
                 return result_message
+            if league.year == 2026 and week == 6:
+                result_message = (
+                    "Week 6 starts for 2026 are managed under week 5 only. Please try again using week 5."
+                )
+                if update_response:
+                    await deferred.edit(content=result_message)
+                return result_message
             # do you own the team?
             stmt = select(TeamOwned).where(
                 TeamOwned.team_key == frcteam,
