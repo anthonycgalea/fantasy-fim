@@ -85,12 +85,17 @@ class Admin(commands.Cog):
                 )
                 return
 
+            event_weeks = [currentWeek.week]
+            # 2026 special case: when finishing week 5, also waive week 6 teams.
+            if currentWeek.year == 2026 and currentWeek.week == 5:
+                event_weeks.append(6)
+
             for league in leagues:
                 competing_result = await session.execute(
                     select(TeamScore.team_key)
                     .join(Team, Team.team_number == TeamScore.team_key)
                     .join(FRCEvent, TeamScore.event_key == FRCEvent.event_key)
-                    .where(Team.is_fim, FRCEvent.week == currentWeek.week)
+                    .where(Team.is_fim, FRCEvent.week.in_(event_weeks))
                     .where(FRCEvent.year == currentWeek.year)
                 )
                 competing_teams = competing_result.all()
