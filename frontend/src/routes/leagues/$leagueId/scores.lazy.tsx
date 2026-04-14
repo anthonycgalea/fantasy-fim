@@ -59,9 +59,9 @@ export const ScoresPage = () => {
           <SelectValue placeholder="Select Week" />
         </SelectTrigger>
         <SelectContent>
-          {Array.from({ length: lineups.data?.length ?? 0 }).map((_, index) => (
-            <SelectItem key={index} value={(index + 1).toString()}>
-              Week {index + 1}
+          {lineups.data?.map((lineup) => (
+            <SelectItem key={lineup.week} value={lineup.week.toString()}>
+              Week {lineup.week}
             </SelectItem>
           ))}
         </SelectContent>

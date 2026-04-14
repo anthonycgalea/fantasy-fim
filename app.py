@@ -838,12 +838,25 @@ def get_lineups(leagueId):
     """
     try:
         with Session() as session:
+            league = session.query(League).filter(League.league_id == leagueId).first()
+            if not league:
+                return jsonify({"error": "League not found"}), 404
+
             # Query to get all fantasy teams for the given league
             fantasy_teams = (
                 session.query(FantasyTeam)
                 .filter(FantasyTeam.league_id == leagueId)
                 .all()
             )
+
+            # Query to get all configured weeks for the league year.
+            configured_weeks = [
+                row.week
+                for row in session.query(WeekStatus.week)
+                .filter(WeekStatus.year == league.year)
+                .order_by(WeekStatus.week.asc())
+                .all()
+            ]
 
             # Query to get all team started records for the given league
             started_teams = (
@@ -856,10 +869,19 @@ def get_lineups(leagueId):
                 .all()
             )
 
+            # Keep backwards compatibility for leagues missing weekstatus rows.
+            if configured_weeks:
+                weeks_to_render = configured_weeks
+            else:
+                max_started_week = max(
+                    (started_team.week for started_team in started_teams), default=7
+                )
+                weeks_to_render = list(range(1, max_started_week + 1))
+
             # Organizing the output by week
             output = {}
 
-            for week in range(1, 7):  # Weeks 1 to 6 (including MSC week)
+            for week in weeks_to_render:
                 output[week] = {"week": week, "fantasy_teams": []}
 
                 # Populate each fantasy team entry
