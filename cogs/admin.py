@@ -600,8 +600,7 @@ class Admin(commands.Cog):
                                 for score in scores_result.scalars().all()
                             }
 
-                            teamRegistrationChangeEmbed = None
-                            teamRegistrationChangeMsg = None
+                            registration_changes = []
 
                             for team in teams_payload:
                                 teamNumber = str(team.get("team_number"))
@@ -620,27 +619,7 @@ class Admin(commands.Cog):
                                     change_text = (
                                         f"Team {teamNumber} registered for {eventKey}"
                                     )
-                                    if teamRegistrationChangeMsg is None:
-                                        teamRegistrationChangeMsg = (
-                                            await self.bot.log_message(
-                                                f"{eventKey} registration changes",
-                                                change_text,
-                                            )
-                                        )
-                                        teamRegistrationChangeEmbed = Embed(
-                                            title=f"{eventKey} registration changes",
-                                            description=change_text,
-                                        )
-                                        await teamRegistrationChangeMsg.edit(
-                                            embed=teamRegistrationChangeEmbed
-                                        )
-                                    else:
-                                        teamRegistrationChangeEmbed.description += (
-                                            f"\n{change_text}"
-                                        )
-                                        await teamRegistrationChangeMsg.edit(
-                                            embed=teamRegistrationChangeEmbed
-                                        )
+                                    registration_changes.append(change_text)
                                 else:
                                     existing_scores.pop(teamNumber, None)
 
@@ -652,27 +631,20 @@ class Admin(commands.Cog):
                                 change_text = (
                                     f"Team {teamNumber} un-registered from {eventKey}"
                                 )
-                                if teamRegistrationChangeMsg is None:
-                                    teamRegistrationChangeMsg = (
-                                        await self.bot.log_message(
-                                            f"{eventKey} registration changes",
-                                            change_text,
-                                        )
-                                    )
-                                    teamRegistrationChangeEmbed = Embed(
-                                        title=f"{eventKey} registration changes",
-                                        description=change_text,
-                                    )
-                                    await teamRegistrationChangeMsg.edit(
-                                        embed=teamRegistrationChangeEmbed
-                                    )
-                                else:
-                                    teamRegistrationChangeEmbed.description += (
-                                        f"\n{change_text}"
-                                    )
-                                    await teamRegistrationChangeMsg.edit(
-                                        embed=teamRegistrationChangeEmbed
-                                    )
+                                registration_changes.append(change_text)
+
+                            if registration_changes:
+                                all_changes_text = "\n".join(registration_changes)
+                                teamRegistrationChangeMsg = await self.bot.log_message(
+                                    f"{eventKey} registration changes", all_changes_text
+                                )
+                                teamRegistrationChangeEmbed = Embed(
+                                    title=f"{eventKey} registration changes",
+                                    description=all_changes_text,
+                                )
+                                await teamRegistrationChangeMsg.edit(
+                                    embed=teamRegistrationChangeEmbed
+                                )
 
                     await session.commit()
 
