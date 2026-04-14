@@ -102,7 +102,7 @@ const RosterWeeksTable = ({
 }) => {
 	if (!rosterWeek) return null;
 
-	const weeks = [1, 2, 3, 4, 6];
+	const weeks = [1, 2, 3, 4, 6, 7];
 
 	return (
 		<Table>
@@ -116,17 +116,17 @@ const RosterWeeksTable = ({
 			</TableHeader>
 			<TableBody>
 				{rosterWeek.roster.map((team) => {
-					const weeklyEvents = Array(5).fill("-");
+					const weeklyEvents = Object.fromEntries(weeks.map((week) => [week, "-"])) as Record<number, string>;
 					team.events.forEach((event) => {
-						if (event.week >= 1 && event.week <= 6) {
-							weeklyEvents[event.week - 1] = event.event_key;
+						if (weeks.includes(event.week)) {
+							weeklyEvents[event.week] = event.event_key;
 						}
 					});
 					return (
 						<TableRow key={team.team_key}>
 							<TableCell>{team.team_key}</TableCell>
-							{weeklyEvents.map((ev, i) => (
-								<TableCell key={i}>{ev}</TableCell>
+							{weeks.map((week) => (
+								<TableCell key={week}>{weeklyEvents[week]}</TableCell>
 							))}
 						</TableRow>
 					);

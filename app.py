@@ -600,7 +600,7 @@ def get_roster_weeks(leagueId):
                         .join(TeamScore, TeamScore.event_key == FRCEvent.event_key)
                         .filter(TeamScore.team_key == frcteam.team_key)
                         .filter(FRCEvent.year == league.year)
-                        .filter(FRCEvent.week < 6)
+                        .filter(FRCEvent.week <= 7)
                         .all()
                     )
 
