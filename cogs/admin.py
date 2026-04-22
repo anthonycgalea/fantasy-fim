@@ -1050,6 +1050,14 @@ class Admin(commands.Cog):
                         )
                     )
                     lockedTeamsRanked = locked_result.scalars().all()
+                    locked_rank_lookup = {
+                        team_id: rank for rank, (team_id, _) in enumerate(lockedTop3)
+                    }
+                    lockedTeamsRanked.sort(
+                        key=lambda score: locked_rank_lookup.get(
+                            score.fantasy_team_id, len(lockedTop3TeamIds)
+                        )
+                    )
 
                     # Assign rank points manually for locked top 3
                     for i, teamscore in enumerate(lockedTeamsRanked):
