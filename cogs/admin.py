@@ -413,7 +413,7 @@ class Admin(commands.Cog):
                 eventKey = str(response["key"])
                 eventName = str(response["name"])
                 week = 99
-                year = eventKey[:4]
+                year = int(response["year"])
                 event_result = await session.execute(
                     select(FRCEvent).where(FRCEvent.event_key == eventKey)
                 )
