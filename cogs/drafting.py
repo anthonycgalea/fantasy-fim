@@ -702,6 +702,37 @@ class Drafting(commands.Cog):
             interaction=interaction, team_number=team_number, force=False
         )
 
+    @app_commands.command(
+        name="autodraft",
+        description="Automatically draft the highest EPA team currently available.",
+    )
+    async def auto_draft(self, interaction: discord.Interaction):
+        await interaction.response.send_message(
+            "Attempting to auto-draft the highest EPA team.", ephemeral=True
+        )
+        draft: Draft = await self.getDraftFromChannel(interaction=interaction)
+        message = await interaction.original_response()
+        if draft is None:
+            await message.edit(content="No draft associated with this channel.")
+            return
+        league: League = await self.getLeague(draft_id=draft.draft_id)
+        suggestedTeams = await self.getSuggestedTeamsList(
+            eventKey=draft.event_key,
+            year=league.year,
+            isFiM=league.is_fim,
+            draft_id=draft.draft_id,
+            isOffseason=league.offseason,
+        )
+        if len(suggestedTeams) == 0:
+            await message.edit(content="No available teams left to draft.")
+            return
+
+        best_team = suggestedTeams[0][0]
+        await message.edit(content=f"Auto-drafting team {best_team}.")
+        await self.makeDraftPickHandler(
+            interaction=interaction, team_number=best_team, force=False
+        )
+
     """@app_commands.command(name="draftboard", description="Re-post the Draft Board")
   @commands.cooldown(rate=1, per=60)
   async def repost_draft_board(self, interaction: discord.Interaction):
