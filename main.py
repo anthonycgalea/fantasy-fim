@@ -166,7 +166,7 @@ class FantasyFiMBot(commands.Bot):
             )
         )
 
-        threading.Thread(target=self.run_scheduled_district_update, daemon=True).start()
+        #threading.Thread(target=self.run_scheduled_district_update, daemon=True).start()
 
         logger.info("Bot startup complete!")
 
