@@ -1426,18 +1426,16 @@ class Admin(commands.Cog):
             )
 
     async def addTeamsToEventTask(
-        self, interaction: discord.Interaction, teams: str, draft: Draft
+        self, interaction: discord.Interaction, teams: str, event_key: str
     ):
         async with self.bot.async_session() as session:
-            # Step 1: Retrieve the associated FRCEvent from the draft object
+            # Step 1: Retrieve the associated FRCEvent
             event_result = await session.execute(
-                select(FRCEvent).where(FRCEvent.event_key == draft.event_key)
+                select(FRCEvent).where(FRCEvent.event_key == event_key)
             )
             event = event_result.scalars().first()
             if not event:
-                await interaction.followup.send(
-                    f"Event with key {draft.event_key} not found."
-                )
+                await interaction.followup.send(f"Event with key {event_key} not found.")
                 return
             # Step 2: Split the team list (supports comma, space, or mixed separators)
             import re
@@ -2804,18 +2802,27 @@ class Admin(commands.Cog):
         name="addeventteams",
         description="Add teams to an event (use for offseasons with released team list) (ADMIN)",
     )
-    async def addEventTeams(self, interaction: discord.Interaction, teams: str):
+    async def addEventTeams(
+        self,
+        interaction: discord.Interaction,
+        teams: str,
+        event_key: str | None = None,
+    ):
         if await self.verifyAdmin(interaction):
             await interaction.response.send_message(
                 f"Attempting to admin add teams {teams} to event"
             )
             response = await interaction.original_response()
-            draftCog = drafting.Drafting(self.bot)
-            draft: Draft = await draftCog.getDraftFromChannel(interaction)
-            if not draft:
-                await response.edit(content="No draft associated with this channel")
-                return
-            await self.addTeamsToEventTask(interaction, teams, draft)
+            if event_key is None:
+                draftCog = drafting.Drafting(self.bot)
+                draft: Draft = await draftCog.getDraftFromChannel(interaction)
+                if not draft:
+                    await response.edit(content="No draft associated with this channel")
+                    return
+                event_key = draft.event_key
+            else:
+                event_key = event_key.strip()
+            await self.addTeamsToEventTask(interaction, teams, event_key)
 
     @app_commands.command(
         name="setstatcorrection",
