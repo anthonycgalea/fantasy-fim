@@ -535,6 +535,8 @@ class Admin(commands.Cog):
                         event.event_key: event
                         for event in events_result.scalars().all()
                     }
+                    teams_result = await session.execute(select(Team.team_number))
+                    existing_team_numbers = set(teams_result.scalars().all())
 
                     first_new_event = True
 
@@ -608,6 +610,72 @@ class Admin(commands.Cog):
                                     continue
 
                                 if teamNumber not in existing_scores:
+                                    if teamNumber not in existing_team_numbers:
+                                        team_url = (
+                                            f"{TBA_API_ENDPOINT}team/frc{teamNumber}"
+                                        )
+                                        team_response = http_session.get(
+                                            team_url, headers=reqheaders, timeout=30
+                                        )
+
+                                        if team_response.status_code == 404:
+                                            logger.warning(
+                                                "Skipping team %s for %s because it "
+                                                "was not found in the database or on "
+                                                "The Blue Alliance",
+                                                teamNumber,
+                                                eventKey,
+                                            )
+                                            continue
+
+                                        team_response.raise_for_status()
+                                        team_payload = team_response.json()
+                                        if not isinstance(
+                                            team_payload, dict
+                                        ) or not team_payload.get("team_number"):
+                                            logger.warning(
+                                                "Skipping team %s for %s because The "
+                                                "Blue Alliance returned no team data",
+                                                teamNumber,
+                                                eventKey,
+                                            )
+                                            continue
+
+                                        returned_team_number = str(
+                                            team_payload["team_number"]
+                                        )
+                                        if returned_team_number != teamNumber:
+                                            logger.warning(
+                                                "Skipping team %s for %s because The "
+                                                "Blue Alliance returned team %s",
+                                                teamNumber,
+                                                eventKey,
+                                                returned_team_number,
+                                            )
+                                            continue
+
+                                        nickname = (
+                                            team_payload.get("nickname")
+                                            or team_payload.get("name")
+                                            or ""
+                                        )
+                                        session.add(
+                                            Team(
+                                                team_number=teamNumber,
+                                                name=str(nickname),
+                                                is_fim=team_payload.get("state_prov")
+                                                == "Michigan",
+                                                rookie_year=team_payload.get(
+                                                    "rookie_year"
+                                                ),
+                                            )
+                                        )
+                                        existing_team_numbers.add(teamNumber)
+                                        logger.info(
+                                            "Inserted team %s from The Blue Alliance",
+                                            teamNumber,
+                                        )
+
                                     logger.info(
                                         f"Team {teamNumber} registered for {eventKey}"
                                     )
