@@ -2275,6 +2275,100 @@ class Admin(commands.Cog):
             )
 
     @app_commands.command(
+        name="swapdraftpick", description="Replace a team's offseason draft pick (ADMIN)"
+    )
+    @app_commands.describe(
+        originalpick="FRC team number that was drafted",
+        replacementpick="Eligible, undrafted FRC team number to select instead",
+    )
+    async def swapDraftPick(
+        self,
+        interaction: discord.Interaction,
+        originalpick: str,
+        replacementpick: str,
+    ):
+        if not await self.verifyAdmin(interaction):
+            return
+        await interaction.response.defer(ephemeral=True)
+        message = await interaction.original_response()
+        draftCog = drafting.Drafting(self.bot)
+        draft = await draftCog.getDraftFromChannel(interaction)
+        if draft is None:
+            await message.edit(content="No draft associated with this channel.")
+            return
+        if (
+            not originalpick.isascii()
+            or not originalpick.isdecimal()
+            or not replacementpick.isascii()
+            or not replacementpick.isdecimal()
+            or int(originalpick) <= 0
+            or int(replacementpick) <= 0
+        ):
+            await message.edit(content="Enter valid positive FRC team numbers.")
+            return
+        originalpick = str(int(originalpick))
+        replacementpick = str(int(replacementpick))
+        if originalpick == replacementpick:
+            await message.edit(content="The replacement must be a different team.")
+            return
+        league = await draftCog.getLeague(draft.draft_id)
+        if not league.offseason:
+            await message.edit(content="Draft picks can only be swapped for offseason events.")
+            return
+        async with self.bot.async_session() as session:
+            # Serialize corrections in this draft and commit all changes together.
+            await session.execute(
+                select(Draft).where(Draft.draft_id == draft.draft_id).with_for_update()
+            )
+            result = await session.execute(
+                select(DraftPick).where(
+                    DraftPick.draft_id == draft.draft_id,
+                    DraftPick.team_number == originalpick,
+                )
+            )
+            pick = result.scalars().first()
+            if pick is None:
+                await message.edit(content=f"Team {originalpick} has not been drafted in this draft.")
+                return
+            if not await draftCog.teamIsUnpicked(draft.draft_id, replacementpick):
+                await message.edit(content=f"Team {replacementpick} has already been picked.")
+                return
+            if not await draftCog.teamIsInDraft(
+                replacementpick, draft.event_key, league.year, league.is_fim
+            ):
+                await message.edit(content=f"Team {replacementpick} is not eligible for this draft.")
+                return
+            result = await session.execute(
+                select(TeamOwned).where(
+                    TeamOwned.draft_id == draft.draft_id,
+                    TeamOwned.league_id == draft.league_id,
+                    TeamOwned.team_key == replacementpick,
+                )
+            )
+            if result.scalars().first() is not None:
+                await message.edit(content=f"Team {replacementpick} is already on a roster in this draft.")
+                return
+            result = await session.execute(
+                select(TeamOwned).where(
+                    TeamOwned.draft_id == draft.draft_id,
+                    TeamOwned.league_id == draft.league_id,
+                    TeamOwned.fantasy_team_id == pick.fantasy_team_id,
+                    TeamOwned.team_key == originalpick,
+                )
+            )
+            owned = result.scalars().first()
+            if owned is not None:
+                owned.team_key = replacementpick
+            pick.team_number = replacementpick
+            fantasy_team_id = pick.fantasy_team_id
+            pick_number = pick.pick_number
+            await session.commit()
+        await message.edit(
+            content=f"Replaced team {originalpick} with team {replacementpick} "
+            f"for fantasy team {fantasy_team_id} at pick {pick_number}."
+        )
+
+    @app_commands.command(
         name="autopick", description="Admin ability to force an auto draft pick (ADMIN)"
     )
     async def forceAutoPick(self, interaction: discord.Interaction):
