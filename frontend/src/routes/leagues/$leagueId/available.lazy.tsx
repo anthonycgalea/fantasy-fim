@@ -42,13 +42,13 @@ export const AvailableTeamsPage = () => {
 	if (!league.data?.offseason && currentWeek.data && currentWeek.data.year === league.data?.year) {
 		epaYear = currentWeek.data.week === 1 ? prevYear : league.data.year;
 	}
-	const [selectedWeeks, setSelectedWeeks] = React.useState<number[]>([1, 2, 3, 4, 6]);
+	const [selectedWeeks, setSelectedWeeks] = React.useState<number[]>([1, 2, 3, 4, 5, 6]);
 
 	const toggleWeekSelection = (week: number) => setSelectedWeeks((prev) => (prev.includes(week) ? prev.filter((w) => w !== week) : [...prev, week]));
 
 	if (league.isLoading || availableTeams.isLoading) return <div>Loading...</div>;
 
-	const weeks = [1, 2, 3, 4, 6];
+	const weeks = [1, 2, 3, 4, 5, 6];
 	const teams =
 		availableTeams.data
 			?.map((team) => ({

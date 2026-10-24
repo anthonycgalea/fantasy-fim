@@ -22,7 +22,7 @@ const LeagueWeeksTab = ({ draftId }: LeagueWeeksTabProps) => {
 
   const fantasyTeamWeekCounts: Record<number, number[]> = {}
   fantasyTeams.data?.forEach((team) => {
-    fantasyTeamWeekCounts[team.fantasy_team_id] = [0, 0, 0, 0, 0]
+    fantasyTeamWeekCounts[team.fantasy_team_id] = [0, 0, 0, 0, 0, 0]
   })
 
   draftPicks.data?.forEach((pick) => {
@@ -33,7 +33,8 @@ const LeagueWeeksTab = ({ draftId }: LeagueWeeksTabProps) => {
     })
   })
 
-  const weeks = [1, 2, 3, 4, 6]
+  const combineWeeks = league.data?.year === 2026
+  const weeks = combineWeeks ? [1, 2, 3, 4, "5+6"] : [1, 2, 3, 4, 5, 6]
 
   return (
     <Table>
@@ -51,7 +52,9 @@ const LeagueWeeksTab = ({ draftId }: LeagueWeeksTabProps) => {
         {fantasyTeams.data?.map((team) => (
           <TableRow key={team.fantasy_team_id}>
             <TableCell className="font-bold">{team.team_name}</TableCell>
-            {fantasyTeamWeekCounts[team.fantasy_team_id].map((count, index) => {
+            {weeks.map((_, index) => {
+              const counts = fantasyTeamWeekCounts[team.fantasy_team_id]
+              const count = combineWeeks && index === 4 ? counts[4] + counts[5] : counts[index]
               let className = ''
               if (league.data && count >= league.data.weekly_starts) {
                 className = 'bg-green-300'

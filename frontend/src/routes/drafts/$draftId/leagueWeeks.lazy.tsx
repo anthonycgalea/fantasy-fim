@@ -42,7 +42,8 @@ export const DraftLeagueWeeksPage = () => {
     });
   });
 
-  const weeks: (number | string)[] = [1, 2, 3, 4, "5+6"];
+  const combineWeeks = league.data?.year === 2026;
+  const weeks = combineWeeks ? [1, 2, 3, 4, "5+6"] : [1, 2, 3, 4, 5, 6];
 
   return (
     <Table>
@@ -62,8 +63,9 @@ export const DraftLeagueWeeksPage = () => {
             <TableCell className="font-bold">{team.team_name}</TableCell>
             {weeks.map((_, index) => {
               const counts = fantasyTeamWeekCounts[team.fantasy_team_id];
-              const count =
-                index < 4 ? counts[index] : counts[4] + counts[5];
+              const count = combineWeeks && index === 4
+                ? counts[4] + counts[5]
+                : counts[index];
 
               let className = "";
               if (league.data && count >= league.data.weekly_starts) {

@@ -789,7 +789,7 @@ class Admin(commands.Cog):
                         select(Team).where(Team.team_number == teamscore.team_key)
                     )
                     team_obj = team_result.scalars().first()
-                    if not eventToScore.week == 6:
+                    if eventToScore.week != (6 if eventToScore.year == 2026 else manageteam.STATESWEEK):
                         if int(team_obj.rookie_year) == int(eventToScore.year):
                             teamscore.rookie_points = 5
                         elif int(team_obj.rookie_year) == int(eventToScore.year) - 1:
@@ -971,7 +971,7 @@ class Admin(commands.Cog):
                         select(Team).where(Team.team_number == teamscore.team_key)
                     )
                     team_obj = team_result.scalars().first()
-                    if not week == 6:
+                    if week != (6 if year == 2026 else manageteam.STATESWEEK):
                         if int(team_obj.rookie_year) == int(year):
                             teamscore.rookie_points = 5
                         elif int(team_obj.rookie_year) == int(year) - 1:

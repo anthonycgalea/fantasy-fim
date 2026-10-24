@@ -102,7 +102,7 @@ const RosterWeeksTable = ({
 }) => {
 	if (!rosterWeek) return null;
 
-	const weeks = [1, 2, 3, 4, 6, 7];
+	const weeks = [1, 2, 3, 4, 5, 6, 7];
 
 	return (
 		<Table>

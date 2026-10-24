@@ -38,7 +38,7 @@ export const WaiversPage = () => {
 	const currentWeek = useCurrentWeek();
 
 	const [activeTab, setActiveTab] = useState<"teams" | "priority">("teams");
-	const [selectedWeeks, setSelectedWeeks] = useState<number[]>([1, 2, 3, 4, 6]);
+	const [selectedWeeks, setSelectedWeeks] = useState<number[]>([1, 2, 3, 4, 5, 6]);
 
 	const toggleWeekSelection = (week: number) => {
 		setSelectedWeeks((prev) => (prev.includes(week) ? prev.filter((w) => w !== week) : [...prev, week]));
@@ -51,7 +51,7 @@ export const WaiversPage = () => {
 	const renderWaiverTeams = () => {
 		if (!league.data || !waiverTeams.data) return null;
 
-		const weeks = [1, 2, 3, 4, 6];
+		const weeks = [1, 2, 3, 4, 5, 6];
 		const prevYear = (league.data.year ?? 0) - 1;
 		let epaYear = league.data.offseason ? league.data.year : prevYear;
 		if (!league.data.offseason && currentWeek.data && currentWeek.data.year === league.data.year) {

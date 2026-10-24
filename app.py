@@ -1,4 +1,5 @@
 import os
+from datetime import date
 
 import requests
 from dotenv import load_dotenv
@@ -154,14 +155,25 @@ def get_current_week():
 @app.route("/api/leagues", methods=["GET"])
 def get_leagues():
     """
-    Retrieve a list of active leagues.
+    Retrieve leagues for a year, optionally filtered by offseason status.
     ---
     tags:
         - Leagues
 
+    parameters:
+      - name: year
+        in: query
+        type: integer
+        required: false
+        description: Explicit year includes inactive leagues. Omit for active leagues in the current calendar year.
+      - name: offseason
+        in: query
+        type: boolean
+        required: false
+        description: Filter by true or false. Omit to include both offseason types.
     responses:
       200:
-        description: A list of active leagues.
+        description: A list of matching leagues.
         schema:
           type: array
           items:
@@ -190,12 +202,31 @@ def get_leagues():
               team_size_limit:
                 type: integer
                 example: 6
+      400:
+        description: Invalid year or offseason query parameter.
       500:
         description: Internal server error.
     """
+    year_value = request.args.get("year")
+    try:
+        year = date.today().year if year_value is None else int(year_value)
+    except ValueError:
+        return jsonify({"error": "year must be an integer"}), 400
+
+    offseason_value = request.args.get("offseason")
+    if offseason_value is not None:
+        offseason_value = offseason_value.lower()
+        if offseason_value not in ("true", "false"):
+            return jsonify({"error": "offseason must be true or false"}), 400
+
     try:
         with Session() as session:
-            leagues = session.query(League).filter(League.active).all()
+            query = session.query(League).filter(League.year == year)
+            if year_value is None:
+                query = query.filter(League.active)
+            if offseason_value is not None:
+                query = query.filter(League.offseason == (offseason_value == "true"))
+            leagues = query.all()
 
             return jsonify(
                 [
@@ -1449,7 +1480,7 @@ def get_league_rankings(leagueId):
 def get_states_round_team_ids(leagueId):
     """
     Retrieve the top 3 fantasy team IDs in the states round based on total ranking points,
-    evaluated only on weeks up to and including week 5.
+    evaluated through week 5 for 2026 and week 6 for 2027 onward.
     ---
     tags:
       - Leagues
@@ -1478,7 +1509,7 @@ def get_states_round_team_ids(leagueId):
                 return jsonify({"error": "League not found"}), 404
 
             # Define the maximum week for scoring
-            max_week = 5
+            max_week = 5 if league.year == 2026 else 6
 
             # Query for the fantasy teams in the specified league
             fantasy_teams = (
@@ -1490,7 +1521,7 @@ def get_states_round_team_ids(leagueId):
             result = []
 
             for team in fantasy_teams:
-                # Get all the scores for the fantasy team up to week 5
+                # Get regular-season scores using the cutoff for this league year
                 scores = (
                     session.query(FantasyScores)
                     .filter(
