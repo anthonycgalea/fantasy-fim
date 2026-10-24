@@ -250,7 +250,7 @@ def get_leagues():
 @app.route("/api/leagues/<int:leagueId>", methods=["GET"])
 def get_league(leagueId):
     """
-    Retrieve a league's data.
+    Retrieve a league's data, including inactive leagues.
     ---
     tags:
         - Leagues
@@ -262,7 +262,7 @@ def get_league(leagueId):
         description: The ID of the league for which to retrieve data from.
     responses:
       200:
-        description: An active league.
+        description: A league, regardless of active status.
         schema:
           type: array
           items:
@@ -292,7 +292,7 @@ def get_league(leagueId):
         with Session() as session:
             league = (
                 session.query(League)
-                .filter(League.active, League.league_id == leagueId)
+                .filter(League.league_id == leagueId)
                 .first()
             )
             if not league:

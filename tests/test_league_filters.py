@@ -75,3 +75,15 @@ class LeagueFilterTests(unittest.TestCase):
 
     def test_explicit_current_year_also_includes_inactive(self):
         self.assertEqual(self.ids(f'?year={self.year}'), {1, 2, 6})
+
+    def test_retrieve_active_and_inactive_leagues_by_id(self):
+        for league_id in (1, 5, 6):
+            with self.subTest(league_id=league_id):
+                response = self.client.get(f'/api/leagues/{league_id}')
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.get_json()['league_id'], league_id)
+
+    def test_retrieve_missing_league_returns_not_found(self):
+        response = self.client.get('/api/leagues/999')
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.get_json(), {'error': 'League not found'})
