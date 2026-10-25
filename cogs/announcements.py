@@ -7,9 +7,10 @@ from zoneinfo import ZoneInfo
 
 import discord
 from discord.ext import commands, tasks
-from sqlalchemy import update
+from sqlalchemy import delete, update
 
 from models.scores import WeekStatus
+from models.transactions import TradeProposal, TradeTeams
 
 logger = logging.getLogger("discord")
 NEW_YORK = ZoneInfo("America/New_York")
@@ -91,6 +92,11 @@ class Announcements(commands.Cog):
                     .returning(WeekStatus.year, WeekStatus.week)
                 )
                 locked_weeks = result.all()
+                if locked_weeks:
+                    # Same cleanup as manually running /locklineups.
+                    await session.execute(delete(TradeTeams))
+                    await session.flush()
+                    await session.execute(delete(TradeProposal))
             return locked_weeks
 
     @daily_announcement.before_loop
