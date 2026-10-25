@@ -1,6 +1,8 @@
 import logging
 import os
 import random
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import discord
 from discord import Embed, app_commands
@@ -30,7 +32,11 @@ class General(commands.Cog):
     @app_commands.command(name="ping", description="Shows the bot is active")
     async def ping(self, interaction: discord.Interaction):
         latency = round(self.bot.latency * 1000, 2)
-        await interaction.response.send_message(f"Testing Pong! Latency: {latency}ms")
+        eastern = ZoneInfo("America/New_York")
+        current_time = datetime.now(eastern).strftime("%Y-%m-%d %I:%M:%S %p %Z")
+        await interaction.response.send_message(
+            f"Testing Pong! Latency: {latency}ms\nCurrent time: {current_time}"
+        )
 
     @app_commands.command(
         name="leagues", description="Reports on active leagues and their league ids."
