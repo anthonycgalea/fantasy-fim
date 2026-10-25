@@ -96,7 +96,36 @@ flask db upgrade
 
 ## **API Documentation**
 
-The full API documentation is hosted at [http://localhost:5000/apidocs](http://localhost:5000/apidocs).
+Production API documentation: [https://api.fantasyfim.com/apidocs/](https://api.fantasyfim.com/apidocs/).
+Local documentation: [http://localhost:5000/apidocs/](http://localhost:5000/apidocs/).
+
+All API routes live at the root of the API host. For example:
+
+- `https://api.fantasyfim.com/currentWeek`
+- `https://api.fantasyfim.com/leagues`
+- `https://api.fantasyfim.com/xp?teams=27,33&year=2026`
+- `https://api.fantasyfim.com/drafts/1/availableTeams`
+
+There is no `/api` prefix. Swagger JSON is served at
+`https://api.fantasyfim.com/apidocs/swagger.json`.
+
+### API hostname deployment
+
+1. Point the `api.fantasyfim.com` DNS A/AAAA records to the API server.
+2. Install [the Nginx server configuration](deploy/nginx/api.fantasyfim.com.conf).
+   It forwards root paths unchanged to Gunicorn on `127.0.0.1:5000`, matching
+   the existing deployment workflow.
+3. Enable HTTPS for this hostname with a valid certificate (for example,
+   using Certbot's Nginx integration), validate the Nginx configuration, and reload.
+   The supplied server block is the initial HTTP configuration; TLS is configured
+   on the server after certificate issuance.
+4. Remove the old API proxy location from the website's server configuration and
+   deploy the updated Flask application.
+5. Update frontend API requests to use `https://api.fantasyfim.com` and remove
+   their `/api` path prefix. The frontend source is maintained outside this repo.
+
+These repository changes do not configure DNS, issue certificates, or modify
+the live reverse proxy automatically.
 
 ## **Usage**
 

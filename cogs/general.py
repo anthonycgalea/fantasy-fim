@@ -179,7 +179,7 @@ class General(commands.Cog):
         name="api", description="sends a link to the swagger page for the API"
     )
     async def getAPI(self, interaction: discord.Interaction):
-        await interaction.response.send_message(f"{websiteURL}/api/apidocs")
+        await interaction.response.send_message("https://api.fantasyfim.com/apidocs/")
 
     @app_commands.command(
         name="weekstatus",
