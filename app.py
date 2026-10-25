@@ -1976,72 +1976,31 @@ def get_team_avatar(team_number, year):
         return jsonify({"team_number": team_number, "image": None})
 
 
+# New endpoint to fetch cached EPA values for multiple teams
 @app.route("/api/epa", methods=["GET"])
 def get_team_epas():
-    """Return EPA and normalized match13 XP for each requested team.
+    """Return cached EPA values for the specified teams and year.
 
-    Missing EPA is fetched from Statbotics and cached for known teams.
-    XP is read from the local cache populated by /updatexp. Missing values
-    are returned as null. Each team maps to an object instead of a scalar.
-    ---
-    tags:
-      - Teams
-    parameters:
-      - name: teams
-        in: query
-        type: string
-        required: true
-        description: Comma-separated team numbers.
-        example: "27,33"
-      - name: year
-        in: query
-        type: integer
-        required: true
-        example: 2026
-    responses:
-      200:
-        description: Team numbers mapped to EPA and normalized match13 XP.
-        schema:
-          type: object
-          additionalProperties:
-            type: object
-            properties:
-              year_end_epa:
-                type: integer
-                x-nullable: true
-              match13_xp:
-                type: integer
-                x-nullable: true
-      400:
-        description: Missing teams or year parameter.
+    If a team/year combination is not cached locally the endpoint will
+    attempt to fetch the value directly from Statbotics and store it for
+    future use (provided the team exists in the database).
     """
+
     teams_param = request.args.get("teams")
     year = request.args.get("year", type=int)
 
     if not teams_param or year is None:
         return jsonify({"error": "teams and year parameters are required"}), 400
 
-    teams = list(dict.fromkeys(t.strip() for t in teams_param.split(",") if t.strip()))
+    teams = [t.strip() for t in teams_param.split(",") if t.strip()]
 
     with Session() as session:
         query = session.query(
-            StatboticsData.team_number,
-            StatboticsData.year_end_epa,
-            StatboticsData.match13_xp,
+            StatboticsData.team_number, StatboticsData.year_end_epa
         ).filter(StatboticsData.year == year, StatboticsData.team_number.in_(teams))
-        results = {
-            row.team_number: {
-                "year_end_epa": row.year_end_epa,
-                "match13_xp": row.match13_xp,
-            }
-            for row in query.all()
-        }
+        results = {row.team_number: row.year_end_epa for row in query.all()}
 
-        # XP-only records still need an EPA lookup.
-        missing_teams = [
-            team for team in teams
-            if results.get(team, {}).get("year_end_epa") is None
-        ]
+        missing_teams = [t for t in teams if t not in results]
         for team in missing_teams:
             try:
                 resp = requests.get(
@@ -2064,37 +2023,78 @@ def get_team_epas():
                         unitless_epa = epa.get("unitless")
 
                 if unitless_epa is not None:
-                    values = results.setdefault(
-                        team, {"year_end_epa": None, "match13_xp": None}
-                    )
-                    values["year_end_epa"] = int(unitless_epa)
+                    results[team] = int(unitless_epa)
 
-                    # Update EPA without overwriting existing match13 XP.
-                    if session.query(Team).filter(Team.team_number == team).count() > 0:
-                        cached = session.query(StatboticsData).filter(
+                    # Cache the result if we have the team stored locally
+                    if (
+                        session.query(Team).filter(Team.team_number == team).count() > 0
+                        and session.query(StatboticsData)
+                        .filter(
                             StatboticsData.team_number == team,
                             StatboticsData.year == year,
-                        ).first()
-                        if cached is None:
-                            session.add(
-                                StatboticsData(
-                                    team_number=team,
-                                    year=year,
-                                    year_end_epa=int(unitless_epa),
-                                )
+                        )
+                        .count()
+                        == 0
+                    ):
+                        session.add(
+                            StatboticsData(
+                                team_number=team,
+                                year=year,
+                                year_end_epa=int(unitless_epa),
                             )
-                        else:
-                            cached.year_end_epa = int(unitless_epa)
+                        )
                         session.commit()
             except Exception:
-                session.rollback()
-                # Preserve cached XP even when the EPA lookup fails.
+                # If fetching fails we simply skip caching for this team
                 continue
 
-    return jsonify({
-        team: results.get(team, {"year_end_epa": None, "match13_xp": None})
-        for team in teams
-    })
+    epa_map = {team: results.get(team) for team in teams}
+    return jsonify(epa_map)
+
+
+@app.route("/api/xp", methods=["GET"])
+def get_team_xps():
+    """Return cached normalized match13 XP for the specified teams and year.
+    ---
+    tags:
+      - Teams
+    parameters:
+      - name: teams
+        in: query
+        type: string
+        required: true
+        description: Comma-separated team numbers.
+        example: "27,33"
+      - name: year
+        in: query
+        type: integer
+        required: true
+        example: 2026
+    responses:
+      200:
+        description: Team numbers mapped to integer normalized XP, or null when unavailable.
+        schema:
+          type: object
+          additionalProperties:
+            type: integer
+            x-nullable: true
+      400:
+        description: Missing teams or year parameter.
+    """
+    teams_param = request.args.get("teams")
+    year = request.args.get("year", type=int)
+
+    if not teams_param or year is None:
+        return jsonify({"error": "teams and year parameters are required"}), 400
+
+    teams = [t.strip() for t in teams_param.split(",") if t.strip()]
+    with Session() as session:
+        query = session.query(
+            StatboticsData.team_number, StatboticsData.match13_xp
+        ).filter(StatboticsData.year == year, StatboticsData.team_number.in_(teams))
+        results = {row.team_number: row.match13_xp for row in query.all()}
+
+    return jsonify({team: results.get(team) for team in teams})
 
 
 @app.route("/api/fimeventdata", methods=["GET"])
