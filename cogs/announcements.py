@@ -23,10 +23,12 @@ class Announcements(commands.Cog):
     async def cog_load(self):
         self.lineup_lock_check.start()
         self.weekend_score_update.start()
+        self.final_score_check.start()
 
     def cog_unload(self):
         self.lineup_lock_check.cancel()
         self.weekend_score_update.cancel()
+        self.final_score_check.cancel()
 
     async def send_announcement(self, content):
         raw_channel_id = os.getenv("ANNOUNCEMENTS_CHANNEL_ID")
@@ -132,6 +134,48 @@ class Announcements(commands.Cog):
                 await admin.runScoreUpdate(None, year, week, final=False, states=False)
             except Exception:
                 logger.exception("Scheduled scoring failed for %s week %s", year, week)
+
+
+    @tasks.loop(seconds=60)
+    async def final_score_check(self):
+        try:
+            await self.run_due_final_score_updates()
+        except Exception:
+            logger.exception("Automatic final score check failed.")
+
+    @final_score_check.before_loop
+    async def before_final_score_check(self):
+        await self.bot.wait_until_ready()
+
+    async def run_due_final_score_updates(self, now=None):
+        now = datetime.datetime.now(NEW_YORK) if now is None else now.astimezone(NEW_YORK)
+        cutoff_date = now.date()
+        if now.hour < 21:
+            cutoff_date -= datetime.timedelta(days=1)
+        async with self.bot.async_session() as session:
+            result = await session.execute(
+                select(WeekStatus.year, WeekStatus.week)
+                .where(
+                    WeekStatus.active.is_(True),
+                    WeekStatus.scores_finalized.is_(False),
+                    WeekStatus.week_end_date.is_not(None),
+                    WeekStatus.week_end_date <= cutoff_date,
+                )
+                .order_by(WeekStatus.year, WeekStatus.week)
+            )
+            weeks = result.all()
+        if not weeks:
+            return
+        admin = self.bot.get_cog("Admin")
+        if admin is None:
+            logger.error("Automatic final scoring skipped: Admin cog is not loaded.")
+            return
+        for year, week in weeks:
+            try:
+                await admin.runScoreUpdate(None, year, week, final=True, states=False)
+            except Exception:
+                # Failed scoring remains unfinalized and is retried next minute.
+                logger.exception("Automatic final scoring failed for %s week %s", year, week)
 
 
 async def setup(bot):
