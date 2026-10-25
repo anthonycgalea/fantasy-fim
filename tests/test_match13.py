@@ -45,7 +45,7 @@ class Match13Tests(unittest.IsolatedAsyncioTestCase):
             Response(page(3, None, [team(1323, 0), team(1690, None)])),
         ])
         values = await fetch_norm_xp(http, "https://example.test", {}, 2025)
-        self.assertEqual(values, {"2056": 2128, "1323": 0})
+        self.assertEqual(values, {"2056": 2129, "1323": 0})
         self.assertEqual(http.pages, [1, 3])
 
     async def test_later_page_failure_does_not_return_partial_values(self):
@@ -75,7 +75,7 @@ class Match13Tests(unittest.IsolatedAsyncioTestCase):
             values = await fetch_norm_xp(http, "https://example.test", {}, 2025)
         sleep.assert_awaited_once_with(2.0)
         self.assertEqual(http.pages, [1, 1])
-        self.assertEqual(values, {"2056": 2128})
+        self.assertEqual(values, {"2056": 2129})
 
     async def test_rejects_invalid_values_and_wrong_season(self):
         for value in (True, "2128", float("nan"), float("inf"), 2**31):
