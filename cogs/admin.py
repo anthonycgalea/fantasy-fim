@@ -838,7 +838,7 @@ class Admin(commands.Cog):
                             week_start_date=start_date,
                             lineups_locked=False,
                             scores_finalized=False,
-                            active=False,
+                            active=True,
                         )
                         await session.execute(
                             stmt.on_conflict_do_update(
