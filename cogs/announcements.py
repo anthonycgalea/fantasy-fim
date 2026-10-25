@@ -24,11 +24,13 @@ class Announcements(commands.Cog):
         self.lineup_lock_check.start()
         self.weekend_score_update.start()
         self.final_score_check.start()
+        self.finish_week_check.start()
 
     def cog_unload(self):
         self.lineup_lock_check.cancel()
         self.weekend_score_update.cancel()
         self.final_score_check.cancel()
+        self.finish_week_check.cancel()
 
     async def send_announcement(self, content):
         raw_channel_id = os.getenv("ANNOUNCEMENTS_CHANNEL_ID")
@@ -176,6 +178,46 @@ class Announcements(commands.Cog):
             except Exception:
                 # Failed scoring remains unfinalized and is retried next minute.
                 logger.exception("Automatic final scoring failed for %s week %s", year, week)
+
+
+    @tasks.loop(seconds=60)
+    async def finish_week_check(self):
+        try:
+            await self.run_due_week_finishes()
+        except Exception:
+            logger.exception("Automatic finish-week check failed.")
+
+    @finish_week_check.before_loop
+    async def before_finish_week_check(self):
+        await self.bot.wait_until_ready()
+
+    async def run_due_week_finishes(self, now=None):
+        now = datetime.datetime.now(NEW_YORK) if now is None else now.astimezone(NEW_YORK)
+        async with self.bot.async_session() as session:
+            result = await session.execute(
+                select(WeekStatus.year, WeekStatus.week)
+                .where(
+                    WeekStatus.active.is_(True),
+                    WeekStatus.scores_finalized.is_(True),
+                    WeekStatus.week_end_date.is_not(None),
+                    WeekStatus.week_end_date < now.date(),
+                )
+                .order_by(WeekStatus.year, WeekStatus.week)
+            )
+            weeks = result.all()
+        if not weeks:
+            return
+        admin = self.bot.get_cog("Admin")
+        if admin is None:
+            logger.error("Automatic finish-week skipped: Admin cog is not loaded.")
+            return
+        for year, week in weeks:
+            try:
+                finished = await admin.finishWeekTask(year, week, require_finalized=True)
+                if finished:
+                    await self.send_announcement(f"Deactivated week {week} in {year}")
+            except Exception:
+                logger.exception("Automatic finish-week failed for %s week %s", year, week)
 
 
 async def setup(bot):
