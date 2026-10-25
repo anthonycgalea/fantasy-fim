@@ -96,13 +96,13 @@ class DistrictWeekStatusTests(unittest.IsolatedAsyncioTestCase):
         ):
             await self.cog.importFullDistrctTask(2026)
 
-    async def test_creates_missing_week_with_all_flags_false(self):
+    async def test_creates_missing_week_active_with_other_flags_false(self):
         await self.import_events([event("2026week7", 6, "2026-04-16")])
         with Session(self.engine) as session:
             row = session.get(WeekStatus, (2026, 7))
             self.assertIsNotNone(row)
             self.assertEqual(row.week_start_date, datetime.date(2026, 4, 16))
-            self.assertFalse(row.active)
+            self.assertTrue(row.active)
             self.assertFalse(row.lineups_locked)
             self.assertFalse(row.scores_finalized)
 
