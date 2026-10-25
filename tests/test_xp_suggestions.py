@@ -9,6 +9,7 @@ from cogs.drafting import Drafting
 from models.base import Base
 from models.draft import DraftPick, StatboticsData
 from models.scores import FRCEvent, Team, TeamScore
+from models.users import Player  # Register the players table referenced by draft models.
 
 
 class AsyncSessionAdapter:
