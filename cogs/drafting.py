@@ -408,7 +408,7 @@ class Drafting(commands.Cog):
                 )
             # await self.postDraftBoard(interaction)
             await message.channel.send(
-                content=f"https://fantasyfim.com/drafts/{draft_id}"
+                content=f"https://www.fantasyfim.com/drafts/{draft_id}"
             )
             await self.postSuggestedTeams(interaction)
             await self.notifyNextPick(interaction, draft_id=draft_id)
