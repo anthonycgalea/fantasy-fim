@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 import discord
 from discord.ext import commands, tasks
-from sqlalchemy import delete, update
+from sqlalchemy import delete, select, update
 
 from models.scores import WeekStatus
 from models.transactions import TradeProposal, TradeTeams
@@ -23,10 +23,12 @@ class Announcements(commands.Cog):
     async def cog_load(self):
         self.daily_announcement.start()
         self.lineup_lock_check.start()
+        self.weekend_score_update.start()
 
     def cog_unload(self):
         self.daily_announcement.cancel()
         self.lineup_lock_check.cancel()
+        self.weekend_score_update.cancel()
 
     @tasks.loop(time=datetime.time(hour=16, tzinfo=NEW_YORK))
     async def daily_announcement(self):
@@ -98,6 +100,44 @@ class Announcements(commands.Cog):
                     await session.flush()
                     await session.execute(delete(TradeProposal))
             return locked_weeks
+
+    @tasks.loop(time=datetime.time(hour=22, tzinfo=NEW_YORK))
+    async def weekend_score_update(self):
+        try:
+            await self.run_scheduled_score_updates()
+        except Exception:
+            logger.exception("Scheduled non-final score update failed.")
+
+    @weekend_score_update.before_loop
+    async def before_weekend_score_update(self):
+        await self.bot.wait_until_ready()
+
+    async def run_scheduled_score_updates(self, now=None):
+        now = datetime.datetime.now(NEW_YORK) if now is None else now.astimezone(NEW_YORK)
+        if now.weekday() not in (4, 5):
+            return
+        async with self.bot.async_session() as session:
+            result = await session.execute(
+                select(WeekStatus.year, WeekStatus.week)
+                .where(
+                    WeekStatus.active.is_(True),
+                    WeekStatus.lineups_locked.is_(True),
+                    WeekStatus.scores_finalized.is_(False),
+                )
+                .order_by(WeekStatus.year, WeekStatus.week)
+            )
+            weeks = result.all()
+        if not weeks:
+            return
+        admin = self.bot.get_cog("Admin")
+        if admin is None:
+            logger.error("Scheduled scoring skipped: Admin cog is not loaded.")
+            return
+        for year, week in weeks:
+            try:
+                await admin.runScoreUpdate(None, year, week, final=False, states=False)
+            except Exception:
+                logger.exception("Scheduled scoring failed for %s week %s", year, week)
 
     @daily_announcement.before_loop
     async def before_daily_announcement(self):

@@ -977,7 +977,7 @@ class Admin(commands.Cog):
 
     async def scoreWeekTask(self, interaction: discord.Interaction, year, week):
         async with self.bot.async_session() as session:
-            message = await interaction.original_response()
+            message = await interaction.original_response() if interaction is not None else None
             week_result = await session.execute(
                 select(WeekStatus).where(
                     WeekStatus.week == week, WeekStatus.year == year
@@ -985,11 +985,13 @@ class Admin(commands.Cog):
             )
             weekStatus = week_result.scalars().first()
             if weekStatus is None:
-                await message.edit(content="No week to score.")
-                return
+                if message is not None:
+                    await message.edit(content="No week to score.")
+                return False
             elif weekStatus.scores_finalized:
-                await message.edit(content="Scores are already finalized.")
-                return
+                if message is not None:
+                    await message.edit(content="Scores are already finalized.")
+                return False
             event_weeks = [week]
             # 2026 special case: week 5 scoring should also pull week 6 events.
             if year == 2026 and week == 5:
@@ -1010,7 +1012,8 @@ class Admin(commands.Cog):
                 title=f"Scoring week {week} for {year}",
                 description=f"Importing event info for all {year} {scored_weeks_text} districts from The Blue Alliance",
             )
-            await message.edit(content="", embed=embed)
+            if message is not None:
+                await message.edit(content="", embed=embed)
             embed.description = ""
             logger.info(f"Events to score: {len(eventsToScore)}")
             for event in eventsToScore:
@@ -1019,9 +1022,11 @@ class Admin(commands.Cog):
                     TBA_API_ENDPOINT + "event/" + event.event_key + "/district_points"
                 )
                 reqheaders = get_tba_headers()
-                eventresponse = requests.get(
-                    requestURL, headers=reqheaders, timeout=30
-                ).json()
+                response = await asyncio.to_thread(
+                    requests.get, requestURL, headers=reqheaders, timeout=30
+                )
+                response.raise_for_status()
+                eventresponse = response.json()
                 for team in eventresponse["points"]:
                     team_key = team[3:]
                     score_result = await session.execute(
@@ -1063,16 +1068,19 @@ class Admin(commands.Cog):
                         elif int(team_obj.rookie_year) == int(year) - 1:
                             teamscore.rookie_points = 2
                 embed.description += f"Successfully scored **{event.event_name}**\n"
-                await message.edit(embed=embed)
+                if message is not None:
+                    await message.edit(embed=embed)
                 await session.commit()
             embed.description += f"**All events scored for week {week}**"
-            await message.edit(embed=embed)
+            if message is not None:
+                await message.edit(embed=embed)
+        return True
 
     async def scoreAllLeaguesTask(
         self, interaction: discord.Interaction, year, week, states=False
     ):
         async with self.bot.async_session() as session:
-            message = await interaction.original_response()
+            message = await interaction.original_response() if interaction is not None else None
             leagues_result = await session.execute(
                 select(League).where(League.is_fim, League.year == year)
             )
@@ -1084,11 +1092,13 @@ class Admin(commands.Cog):
             )
             weekStatus = week_result.scalars().first()
             if weekStatus is None:
-                await message.edit(content="No week to score.")
-                return
+                if message is not None:
+                    await message.edit(content="No week to score.")
+                return False
             elif weekStatus.scores_finalized:
-                await message.edit(content="Scores are already finalized.")
-                return
+                if message is not None:
+                    await message.edit(content="Scores are already finalized.")
+                return False
             for league in allLeagues:
                 teams_result = await session.execute(
                     select(FantasyTeam).where(FantasyTeam.league_id == league.league_id)
@@ -1262,9 +1272,11 @@ class Admin(commands.Cog):
 
                 await session.commit()
 
-            await message.edit(
-                content=f"Updated all scores for {year} week {week}, {'with states rules applied' if states else ''}"
-            )
+            if message is not None:
+                await message.edit(
+                    content=f"Updated all scores for {year} week {week}, {'with states rules applied' if states else ''}"
+                )
+        return True
 
     async def scoreSingleDraft(self, interaction: discord.Interaction, draft_id: int):
         async with self.bot.async_session() as session:
@@ -1382,12 +1394,13 @@ class Admin(commands.Cog):
             )
             week_status = week_result.scalars().first()
             if not week_status:
-                await interaction.followup.send(
-                    f"No status found for year {year}, week {week}."
-                )
+                if interaction is not None:
+                    await interaction.followup.send(
+                        f"No status found for year {year}, week {week}."
+                    )
                 return
             leagues_result = await session.execute(
-                select(League).where(League.is_fim, League.active)
+                select(League).where(League.is_fim, League.active, League.year == year)
             )
             leagues = leagues_result.scalars().all()
             for league in leagues:
@@ -1436,9 +1449,10 @@ class Admin(commands.Cog):
                     congrats_message = f"Unofficial scores for Week {week}. Check back later for final results!"
                 channel = self.bot.get_channel(int(league.discord_channel))
                 await channel.send(content=congrats_message, embed=embed)
-            await interaction.followup.send(
-                f"Weekly scores for Week {week} have been sent to all active leagues."
-            )
+            if interaction is not None:
+                await interaction.followup.send(
+                    f"Weekly scores for Week {week} have been sent to all active leagues."
+                )
 
     async def notifySingleDraftTask(self, interaction: discord.Interaction, draft_id):
         async with self.bot.async_session() as session:
@@ -1505,13 +1519,14 @@ class Admin(commands.Cog):
             week_status = week_result.scalars().first()
 
             if not week_status:
-                await interaction.followup.send(
-                    f"No status found for week {week} in year {year}."
-                )
+                if interaction is not None:
+                    await interaction.followup.send(
+                        f"No status found for week {week} in year {year}."
+                    )
                 return
 
             leagues_result = await session.execute(
-                select(League).where(League.is_fim, League.active)
+                select(League).where(League.is_fim, League.active, League.year == year)
             )
             leagues = leagues_result.scalars().all()
 
@@ -1575,9 +1590,10 @@ class Admin(commands.Cog):
                 await channel.send(embed=embed)
 
             # Notify the user who triggered the command that the task is complete
-            await interaction.followup.send(
-                f"League standings for {year} up to week {week} have been sent to all active leagues."
-            )
+            if interaction is not None:
+                await interaction.followup.send(
+                    f"League standings for {year} up to week {week} have been sent to all active leagues."
+                )
 
     async def addTeamsToEventTask(
         self, interaction: discord.Interaction, teams: str, event_key: str
@@ -2295,20 +2311,27 @@ class Admin(commands.Cog):
             await interaction.response.send_message(
                 f"Scoring all leagues for {year} week {week}"
             )
-            await self.scoreWeekTask(interaction, year, week)
-            await self.scoreAllLeaguesTask(interaction, year, week, states=states)
-            if final:
-                async with self.bot.async_session() as session:
-                    weekToMod_result = await session.execute(
-                        select(WeekStatus).where(
-                            WeekStatus.year == year, WeekStatus.week == week
-                        )
+            await self.runScoreUpdate(interaction, year, week, final=final, states=states)
+
+    async def runScoreUpdate(self, interaction, year, week, final=False, states=False):
+        """Shared manual/scheduled score update; None disables interaction progress."""
+        if not await self.scoreWeekTask(interaction, year, week):
+            return False
+        if not await self.scoreAllLeaguesTask(interaction, year, week, states=states):
+            return False
+        if final:
+            async with self.bot.async_session() as session:
+                week_result = await session.execute(
+                    select(WeekStatus).where(
+                        WeekStatus.year == year, WeekStatus.week == week
                     )
-                    weekToMod = weekToMod_result.scalars().first()
-                    weekToMod.scores_finalized = True
-                    await session.commit()
-            await self.notifyWeeklyScoresTask(interaction, year, week)
-            await self.getLeagueStandingsTask(interaction, year, week)
+                )
+                status = week_result.scalars().first()
+                status.scores_finalized = True
+                await session.commit()
+        await self.notifyWeeklyScoresTask(interaction, year, week)
+        await self.getLeagueStandingsTask(interaction, year, week)
+        return True
 
     @app_commands.command(
         name="authorize", description="Add an authorized user to a fantasy team (ADMIN)"
