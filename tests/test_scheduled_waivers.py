@@ -1,7 +1,7 @@
 import datetime
 import unittest
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -133,13 +133,17 @@ class WaiverProcessingFlowTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(row.tuesday_processed)
             self.assertFalse(row.wednesday_processed)
             self.assertFalse(row.thursday_processed)
-        self.channel.send.assert_awaited_once()
+        self.channel.send.assert_not_awaited()
+        self.bot.fetch_channel.assert_not_awaited()
 
     async def test_failed_processing_does_not_set_flag(self):
         self.seed_week_and_league()
-        self.channel.send.side_effect = RuntimeError("Discord unavailable")
-        with self.assertRaises(RuntimeError):
-            await self.admin.processWaiversTask(processed_field="wednesday_processed")
+        with patch.object(
+            AsyncSessionAdapter, "commit",
+            new=AsyncMock(side_effect=RuntimeError("Commit failed")),
+        ):
+            with self.assertRaises(RuntimeError):
+                await self.admin.processWaiversTask(processed_field="wednesday_processed")
         with Session(self.engine) as session:
             self.assertFalse(session.get(WeekStatus, (2026, 1)).wednesday_processed)
 
@@ -167,6 +171,10 @@ class WaiverProcessingFlowTests(unittest.IsolatedAsyncioTestCase):
                 league_id=1, league_name="Test", year=2026, active=True,
                 is_fim=True, discord_channel="123", team_size_limit=3,
             ))
+            session.add(League(
+                league_id=2, league_name="No claims", year=2026, active=True,
+                is_fim=True, discord_channel="456", team_size_limit=3,
+            ))
             session.add(FantasyTeam(fantasy_team_id=1, fantasy_team_name="Test", league_id=1))
             session.add(Draft(draft_id=1, league_id=1, event_key="2026fim", discord_channel="123"))
             for number in ("27", "33"):
@@ -188,6 +196,7 @@ class WaiverProcessingFlowTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(session.query(WaiverClaim).count(), 0)
             self.assertTrue(session.get(WeekStatus, (2026, 1)).lineups_locked)
         self.channel.send.assert_awaited_once()
+        self.bot.fetch_channel.assert_awaited_once_with(123)
 
 
 if __name__ == "__main__":
