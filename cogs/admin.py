@@ -59,6 +59,32 @@ STATBOTICS_ENDPOINT = "https://api.statbotics.io/v3/team_years"
 MATCH13_ENDPOINT = "https://actions.match13.com/v1/years/{year}/teams"
 
 
+def get_district_week_start_dates(events, year):
+    """Earliest valid start date per supported, one-based district event week."""
+    dates = {}
+    for event in events:
+        if not isinstance(event, dict) or event.get("event_type") not in (1, 2, 5):
+            continue
+        tba_week = event.get("week")
+        if type(tba_week) is not int or not 0 <= tba_week <= 6:
+            continue
+        if not str(event.get("key", "")).startswith(str(year)):
+            continue
+        raw_date = event.get("start_date")
+        if not isinstance(raw_date, str):
+            continue
+        try:
+            start_date = datetime.date.fromisoformat(raw_date)
+        except ValueError:
+            continue
+        if start_date.year != year:
+            continue
+        week = tba_week + 1
+        if week not in dates or start_date < dates[week]:
+            dates[week] = start_date
+    return dates
+
+
 class Admin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -612,6 +638,7 @@ class Admin(commands.Cog):
                         await originalMessage.edit(embed=embed)
                         return
 
+                    week_start_dates = get_district_week_start_dates(events_payload, int(year))
                     numberOfEvents = len(events_payload)
 
                     events_result = await session.execute(
@@ -627,7 +654,11 @@ class Admin(commands.Cog):
                     first_new_event = True
 
                     for index, event in enumerate(events_payload, start=1):
-                        week = int(event.get("week", 0)) + 1
+                        # Null/invalid TBA weeks cannot be assigned to a season week.
+                        tba_week = event.get("week")
+                        if type(tba_week) is not int:
+                            continue
+                        week = tba_week + 1
                         if event.get("event_type") in [1, 2, 5]:
                             eventKey = str(event.get("key"))
                             eventName = str(event.get("name"))
@@ -799,6 +830,18 @@ class Admin(commands.Cog):
                                 await teamRegistrationChangeMsg.edit(
                                     embed=teamRegistrationChangeEmbed
                                 )
+
+                    for week, start_date in week_start_dates.items():
+                        result = await session.execute(
+                            update(WeekStatus)
+                            .where(WeekStatus.year == int(year), WeekStatus.week == week)
+                            .values(week_start_date=start_date)
+                        )
+                        if result.rowcount == 0:
+                            logger.warning(
+                                "No weekstatus row for %s week %s; start date not updated.",
+                                year, week,
+                            )
 
                     await session.commit()
 
