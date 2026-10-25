@@ -98,6 +98,7 @@ def get_district_week_end_dates(events, year):
 class Admin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self._score_update_lock = asyncio.Lock()
 
     async def put_teams_on_waivers(self, interaction: discord.Interaction):
         async with self.bot.async_session() as session:
@@ -2378,23 +2379,24 @@ class Admin(commands.Cog):
 
     async def runScoreUpdate(self, interaction, year, week, final=False, states=False):
         """Shared manual/scheduled score update; None disables interaction progress."""
-        if not await self.scoreWeekTask(interaction, year, week):
-            return False
-        if not await self.scoreAllLeaguesTask(interaction, year, week, states=states):
-            return False
-        if final:
-            async with self.bot.async_session() as session:
-                week_result = await session.execute(
-                    select(WeekStatus).where(
-                        WeekStatus.year == year, WeekStatus.week == week
+        async with self._score_update_lock:
+            if not await self.scoreWeekTask(interaction, year, week):
+                return False
+            if not await self.scoreAllLeaguesTask(interaction, year, week, states=states):
+                return False
+            if final:
+                async with self.bot.async_session() as session:
+                    week_result = await session.execute(
+                        select(WeekStatus).where(
+                            WeekStatus.year == year, WeekStatus.week == week
+                        )
                     )
-                )
-                status = week_result.scalars().first()
-                status.scores_finalized = True
-                await session.commit()
-        await self.notifyWeeklyScoresTask(interaction, year, week)
-        await self.getLeagueStandingsTask(interaction, year, week)
-        return True
+                    status = week_result.scalars().first()
+                    status.scores_finalized = True
+                    await session.commit()
+            await self.notifyWeeklyScoresTask(interaction, year, week)
+            await self.getLeagueStandingsTask(interaction, year, week)
+            return True
 
     @app_commands.command(
         name="authorize", description="Add an authorized user to a fantasy team (ADMIN)"
