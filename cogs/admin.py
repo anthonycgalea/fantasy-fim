@@ -231,7 +231,7 @@ class Admin(commands.Cog):
                 content=(
                     f"Updated normalized match13 XP for {len(rows)} teams in {year}. "
                     f"Skipped {len(values) - len(rows)} teams not in the teams table. "
-                    "Values were truncated to integers; missing normXp values were left unchanged."
+                    "Values were rounded to integers; missing normXp values were left unchanged."
                 )
             )
         except discord.HTTPException:
