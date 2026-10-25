@@ -151,6 +151,7 @@ class FantasyFiMBot(commands.Bot):
     async def setup_hook(self):
         await self.setup_db()
         await self.load_extension("cogs.general")
+        await self.load_extension("cogs.announcements")
         await self.load_extension("cogs.scores")
         await self.load_extension("cogs.admin")
         await self.load_extension("cogs.drafting")
