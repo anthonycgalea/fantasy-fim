@@ -1984,6 +1984,31 @@ def get_team_epas():
     If a team/year combination is not cached locally the endpoint will
     attempt to fetch the value directly from Statbotics and store it for
     future use (provided the team exists in the database).
+    ---
+    tags:
+      - Teams
+    parameters:
+      - name: teams
+        in: query
+        type: string
+        required: true
+        description: Comma-separated team numbers.
+        example: "27,33"
+      - name: year
+        in: query
+        type: integer
+        required: true
+        example: 2026
+    responses:
+      200:
+        description: Team numbers mapped to integer EPA, or null when unavailable.
+        schema:
+          type: object
+          additionalProperties:
+            type: integer
+            x-nullable: true
+      400:
+        description: Missing teams or year parameter.
     """
 
     teams_param = request.args.get("teams")
