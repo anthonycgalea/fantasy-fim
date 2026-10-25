@@ -1,4 +1,4 @@
-"""Daily announcements scheduled in New York local time."""
+"""Lineup locking, score updates, and announcements in New York local time."""
 
 import datetime
 import logging
@@ -21,30 +21,24 @@ class Announcements(commands.Cog):
         self.bot = bot
 
     async def cog_load(self):
-        self.daily_announcement.start()
         self.lineup_lock_check.start()
         self.weekend_score_update.start()
 
     def cog_unload(self):
-        self.daily_announcement.cancel()
         self.lineup_lock_check.cancel()
         self.weekend_score_update.cancel()
-
-    @tasks.loop(time=datetime.time(hour=16, tzinfo=NEW_YORK))
-    async def daily_announcement(self):
-        await self.send_announcement("testing")
 
     async def send_announcement(self, content):
         raw_channel_id = os.getenv("ANNOUNCEMENTS_CHANNEL_ID")
         if not raw_channel_id:
-            logger.warning("Daily announcement skipped: ANNOUNCEMENTS_CHANNEL_ID is not set.")
+            logger.warning("Announcement skipped: ANNOUNCEMENTS_CHANNEL_ID is not set.")
             return
         try:
             channel_id = int(raw_channel_id)
             if channel_id <= 0:
                 raise ValueError
         except ValueError:
-            logger.error("Daily announcement skipped: ANNOUNCEMENTS_CHANNEL_ID must be a positive integer.")
+            logger.error("Announcement skipped: ANNOUNCEMENTS_CHANNEL_ID must be a positive integer.")
             return
 
         try:
@@ -53,8 +47,8 @@ class Announcements(commands.Cog):
                 channel = await self.bot.fetch_channel(channel_id)
             await channel.send(content)
         except (discord.HTTPException, discord.InvalidData, AttributeError):
-            # Keep the loop alive so the next day's announcement is attempted.
-            logger.exception("Could not send the daily announcement.")
+            # Keep scheduled jobs alive after a Discord delivery failure.
+            logger.exception("Could not send the announcement.")
 
     @tasks.loop(seconds=60)
     async def lineup_lock_check(self):
@@ -138,10 +132,6 @@ class Announcements(commands.Cog):
                 await admin.runScoreUpdate(None, year, week, final=False, states=False)
             except Exception:
                 logger.exception("Scheduled scoring failed for %s week %s", year, week)
-
-    @daily_announcement.before_loop
-    async def before_daily_announcement(self):
-        await self.bot.wait_until_ready()
 
 
 async def setup(bot):
