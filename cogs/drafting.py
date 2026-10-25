@@ -183,7 +183,7 @@ class Drafting(commands.Cog):
             # Base query for Team and StatboticsData
             if isFiM:
                 stmt = (
-                    select(Team.team_number, StatboticsData.year_end_epa)
+                    select(Team.team_number, StatboticsData.match13_xp)
                     .distinct()
                     .join(TeamScore, Team.team_number == TeamScore.team_key)
                     .join(FRCEvent, TeamScore.event_key == FRCEvent.event_key)
@@ -199,7 +199,7 @@ class Drafting(commands.Cog):
                 )
             elif not isOffseason:
                 stmt = (
-                    select(TeamScore.team_key, StatboticsData.year_end_epa)
+                    select(TeamScore.team_key, StatboticsData.match13_xp)
                     .distinct()
                     .join(
                         StatboticsData, TeamScore.team_key == StatboticsData.team_number
@@ -212,7 +212,7 @@ class Drafting(commands.Cog):
                 )
             else:
                 stmt = (
-                    select(TeamScore.team_key, StatboticsData.year_end_epa)
+                    select(TeamScore.team_key, StatboticsData.match13_xp)
                     .distinct()
                     .join(
                         StatboticsData, TeamScore.team_key == StatboticsData.team_number
@@ -224,8 +224,11 @@ class Drafting(commands.Cog):
                     )
                 )
 
-            # Order by year_end_epa descending
-            stmt = stmt.order_by(StatboticsData.year_end_epa.desc())
+            # Order by match13_xp descending
+            stmt = stmt.order_by(
+                StatboticsData.match13_xp.desc().nulls_last(),
+                Team.team_number.asc() if isFiM else TeamScore.team_key.asc(),
+            )
 
             # Execute the query
             result = await session.execute(stmt)
@@ -293,19 +296,21 @@ class Drafting(commands.Cog):
             draft_id=draft.draft_id,
             isOffseason=league.offseason,
         )
-        yearToSuggest = league.year if league.offseason else league.year - 1
+        yearToSuggest = (
+            league.year if league.offseason and not league.is_fim else league.year - 1
+        )
         embed = Embed(
             title="**Suggested teams (autodraft)**",
-            description=f"```{'Team':>10s}{f'{yearToSuggest} EPA':>12s}\n",
+            description=f"```{'Team':>10s}{f'{yearToSuggest} XP':>12s}\n",
         )
         teamsRemaining = len(suggestedTeams)
         teamsToReport = 10
         if teamsRemaining < 10:
             teamsToReport = teamsRemaining
         for k in range(teamsToReport):
-            embed.description += (
-                f"{suggestedTeams[k][0]:>10s}{suggestedTeams[k][1]:>12d}\n"
-            )
+            team_number, xp = suggestedTeams[k]
+            xp_display = str(xp) if xp is not None else "—"
+            embed.description += f"{team_number:>10s}{xp_display:>12s}\n"
         embed.description += "```"
         await message.edit(embed=embed)
 
@@ -704,11 +709,11 @@ class Drafting(commands.Cog):
 
     @app_commands.command(
         name="autodraft",
-        description="Automatically draft the highest EPA team currently available.",
+        description="Automatically draft the highest XP team currently available.",
     )
     async def auto_draft(self, interaction: discord.Interaction):
         await interaction.response.send_message(
-            "Attempting to auto-draft the highest EPA team.", ephemeral=True
+            "Attempting to auto-draft the highest XP team.", ephemeral=True
         )
         draft: Draft = await self.getDraftFromChannel(interaction=interaction)
         message = await interaction.original_response()
@@ -741,7 +746,7 @@ class Drafting(commands.Cog):
 
     @app_commands.command(
         name="suggest",
-        description="Provides a list of suggested teams based on the previous season's year-end EPA.",
+        description="Provides a list of suggested teams ranked by normalized match13 XP.",
     )
     @commands.cooldown(rate=1, per=60)
     async def suggestTenTeams(self, interaction: discord.Interaction):
