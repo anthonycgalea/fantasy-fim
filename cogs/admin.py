@@ -59,8 +59,8 @@ STATBOTICS_ENDPOINT = "https://api.statbotics.io/v3/team_years"
 MATCH13_ENDPOINT = "https://actions.match13.com/v1/years/{year}/teams"
 
 
-def get_district_week_start_dates(events, year):
-    """Earliest valid start date per supported, one-based district event week."""
+def get_district_week_dates(events, year, date_field, latest=False):
+    """Select a valid date per supported, one-based district event week."""
     dates = {}
     for event in events:
         if not isinstance(event, dict) or event.get("event_type") not in (1, 2, 5):
@@ -70,7 +70,7 @@ def get_district_week_start_dates(events, year):
             continue
         if not str(event.get("key", "")).startswith(str(year)):
             continue
-        raw_date = event.get("start_date")
+        raw_date = event.get(date_field)
         if not isinstance(raw_date, str):
             continue
         try:
@@ -80,9 +80,19 @@ def get_district_week_start_dates(events, year):
         if start_date.year != year:
             continue
         week = tba_week + 1
-        if week not in dates or start_date < dates[week]:
+        if week not in dates or (start_date > dates[week] if latest else start_date < dates[week]):
             dates[week] = start_date
     return dates
+
+
+def get_district_week_start_dates(events, year):
+    """Earliest event start date for weeks 1–7."""
+    return get_district_week_dates(events, year, "start_date")
+
+
+def get_district_week_end_dates(events, year):
+    """Latest event end date for weeks 1–7."""
+    return get_district_week_dates(events, year, "end_date", latest=True)
 
 
 class Admin(commands.Cog):
@@ -639,6 +649,7 @@ class Admin(commands.Cog):
                         return
 
                     week_start_dates = get_district_week_start_dates(events_payload, int(year))
+                    week_end_dates = get_district_week_end_dates(events_payload, int(year))
                     numberOfEvents = len(events_payload)
 
                     events_result = await session.execute(
@@ -831,11 +842,16 @@ class Admin(commands.Cog):
                                     embed=teamRegistrationChangeEmbed
                                 )
 
-                    for week, start_date in week_start_dates.items():
+                    for week in sorted(week_start_dates.keys() | week_end_dates.keys()):
+                        dates = {}
+                        if week in week_start_dates:
+                            dates["week_start_date"] = week_start_dates[week]
+                        if week in week_end_dates:
+                            dates["week_end_date"] = week_end_dates[week]
                         stmt = insert(WeekStatus).values(
                             year=int(year),
                             week=week,
-                            week_start_date=start_date,
+                            **dates,
                             lineups_locked=False,
                             scores_finalized=False,
                             active=True,
@@ -843,7 +859,7 @@ class Admin(commands.Cog):
                         await session.execute(
                             stmt.on_conflict_do_update(
                                 index_elements=["year", "week"],
-                                set_={"week_start_date": stmt.excluded.week_start_date},
+                                set_={name: getattr(stmt.excluded, name) for name in dates},
                             )
                         )
 
