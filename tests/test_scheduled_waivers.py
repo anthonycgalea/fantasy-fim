@@ -66,12 +66,27 @@ class ScheduledWaiverTests(unittest.IsolatedAsyncioTestCase):
         )
         self.admin.processWaiversTask.assert_not_awaited()
 
-    def test_seven_am_schedule_follows_est_edt(self):
-        scheduled = self.cog.waiver_processing.time[0]
-        self.assertEqual((scheduled.hour, scheduled.minute), (7, 0))
-        for month, expected_offset in ((1, -5), (7, -4)):
-            local = datetime.datetime.combine(datetime.date(2026, month, 15), scheduled)
-            self.assertEqual(local.utcoffset(), datetime.timedelta(hours=expected_offset))
+    async def test_waits_until_seven_am_and_passes_day_marker(self):
+        await self.cog.run_scheduled_waiver_processing(
+            datetime.datetime(2026, 10, 20, 6, 59, tzinfo=NEW_YORK)
+        )
+        self.admin.processWaiversTask.assert_not_awaited()
+        await self.cog.run_scheduled_waiver_processing(
+            datetime.datetime(2026, 10, 20, 7, tzinfo=NEW_YORK)
+        )
+        self.admin.processWaiversTask.assert_awaited_once_with(processed_field="tuesday_processed")
+
+    async def test_seven_am_follows_est_edt(self):
+        for month, day, utc_hour in ((1, 20, 12), (7, 21, 11)):
+            self.admin.processWaiversTask.reset_mock()
+            await self.cog.run_scheduled_waiver_processing(
+                datetime.datetime(2026, month, day, utc_hour - 1, 59, tzinfo=datetime.timezone.utc)
+            )
+            self.admin.processWaiversTask.assert_not_awaited()
+            await self.cog.run_scheduled_waiver_processing(
+                datetime.datetime(2026, month, day, utc_hour, tzinfo=datetime.timezone.utc)
+            )
+            self.admin.processWaiversTask.assert_awaited_once()
 
 
 class WaiverProcessingFlowTests(unittest.IsolatedAsyncioTestCase):
@@ -88,6 +103,55 @@ class WaiverProcessingFlowTests(unittest.IsolatedAsyncioTestCase):
 
     def tearDown(self):
         self.engine.dispose()
+
+    def seed_week_and_league(self, week=1):
+        self.bot.getCurrentWeek.return_value = SimpleNamespace(year=2026, week=week)
+        with Session(self.engine) as session:
+            session.add(WeekStatus(
+                year=2026, week=week, active=True, lineups_locked=True, scores_finalized=False,
+            ))
+            session.add(League(
+                league_id=1, league_name="Test", year=2026, active=True,
+                is_fim=True, discord_channel="123", team_size_limit=3,
+            ))
+            session.commit()
+
+    async def test_new_week_has_all_processing_flags_false(self):
+        self.seed_week_and_league()
+        with Session(self.engine) as session:
+            row = session.get(WeekStatus, (2026, 1))
+            self.assertFalse(row.tuesday_processed)
+            self.assertFalse(row.wednesday_processed)
+            self.assertFalse(row.thursday_processed)
+
+    async def test_successful_run_sets_only_its_flag_and_skips_repeat(self):
+        self.seed_week_and_league()
+        self.assertTrue(await self.admin.processWaiversTask(processed_field="tuesday_processed"))
+        self.assertFalse(await self.admin.processWaiversTask(processed_field="tuesday_processed"))
+        with Session(self.engine) as session:
+            row = session.get(WeekStatus, (2026, 1))
+            self.assertTrue(row.tuesday_processed)
+            self.assertFalse(row.wednesday_processed)
+            self.assertFalse(row.thursday_processed)
+        self.channel.send.assert_awaited_once()
+
+    async def test_failed_processing_does_not_set_flag(self):
+        self.seed_week_and_league()
+        self.channel.send.side_effect = RuntimeError("Discord unavailable")
+        with self.assertRaises(RuntimeError):
+            await self.admin.processWaiversTask(processed_field="wednesday_processed")
+        with Session(self.engine) as session:
+            self.assertFalse(session.get(WeekStatus, (2026, 1)).wednesday_processed)
+
+    async def test_states_week_skips_thursday_but_allows_wednesday(self):
+        self.seed_week_and_league(week=7)
+        self.assertFalse(await self.admin.processWaiversTask(processed_field="thursday_processed"))
+        self.channel.send.assert_not_awaited()
+        self.assertTrue(await self.admin.processWaiversTask(processed_field="wednesday_processed"))
+        with Session(self.engine) as session:
+            row = session.get(WeekStatus, (2026, 7))
+            self.assertFalse(row.thursday_processed)
+            self.assertTrue(row.wednesday_processed)
 
     async def test_no_active_week_does_not_process(self):
         self.bot.getCurrentWeek.return_value = None
