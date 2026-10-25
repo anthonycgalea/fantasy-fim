@@ -765,6 +765,9 @@ class Admin(commands.Cog):
                             **dates,
                             lineups_locked=False,
                             scores_finalized=False,
+                            tuesday_processed=False,
+                            wednesday_processed=False,
+                            thursday_processed=False,
                             active=True,
                         )
                         await session.execute(
@@ -2724,11 +2727,11 @@ class Admin(commands.Cog):
             await self.processWaiversTask(interaction)
 
     async def processWaiversTask(self, interaction=None, processed_field=None):
+        """Shared manual/scheduled processing for the earliest active week."""
         if processed_field not in (
             None, "tuesday_processed", "wednesday_processed", "thursday_processed"
         ):
             raise ValueError("Invalid waiver processing flag.")
-        """Shared manual/scheduled processing for the earliest active week."""
         async with self._score_update_lock:
             message = await interaction.original_response() if interaction is not None else None
             week: WeekStatus = await self.bot.getCurrentWeek()
@@ -3020,6 +3023,9 @@ class Admin(commands.Cog):
                             year=year,
                             lineups_locked=False,
                             scores_finalized=False,
+                            tuesday_processed=False,
+                            wednesday_processed=False,
+                            thursday_processed=False,
                             active=True,
                         )
                         session.add(weekStatToadd)
