@@ -225,7 +225,7 @@ class Announcements(commands.Cog):
                 logger.exception("Automatic finish-week failed for %s week %s", year, week)
 
 
-    @tasks.loop(time=datetime.time(hour=7, tzinfo=NEW_YORK))
+    @tasks.loop(seconds=60)
     async def waiver_processing(self):
         try:
             await self.run_scheduled_waiver_processing()
@@ -238,13 +238,18 @@ class Announcements(commands.Cog):
 
     async def run_scheduled_waiver_processing(self, now=None):
         now = datetime.datetime.now(NEW_YORK) if now is None else now.astimezone(NEW_YORK)
-        if now.weekday() not in (1, 2, 3):
+        if now.weekday() not in (1, 2, 3) or now.hour < 7:
             return
         admin = self.bot.get_cog("Admin")
         if admin is None:
             logger.error("Scheduled waivers skipped: Admin cog is not loaded.")
             return
-        await admin.processWaiversTask()
+        processed_field = {
+            1: "tuesday_processed",
+            2: "wednesday_processed",
+            3: "thursday_processed",
+        }[now.weekday()]
+        await admin.processWaiversTask(processed_field=processed_field)
 
 
 async def setup(bot):
