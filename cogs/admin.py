@@ -832,16 +832,20 @@ class Admin(commands.Cog):
                                 )
 
                     for week, start_date in week_start_dates.items():
-                        result = await session.execute(
-                            update(WeekStatus)
-                            .where(WeekStatus.year == int(year), WeekStatus.week == week)
-                            .values(week_start_date=start_date)
+                        stmt = insert(WeekStatus).values(
+                            year=int(year),
+                            week=week,
+                            week_start_date=start_date,
+                            lineups_locked=False,
+                            scores_finalized=False,
+                            active=False,
                         )
-                        if result.rowcount == 0:
-                            logger.warning(
-                                "No weekstatus row for %s week %s; start date not updated.",
-                                year, week,
+                        await session.execute(
+                            stmt.on_conflict_do_update(
+                                index_elements=["year", "week"],
+                                set_={"week_start_date": stmt.excluded.week_start_date},
                             )
+                        )
 
                     await session.commit()
 
