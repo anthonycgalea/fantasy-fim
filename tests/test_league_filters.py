@@ -47,7 +47,7 @@ class LeagueFilterTests(unittest.TestCase):
         self.engine.dispose()
 
     def ids(self, query=''):
-        response = self.client.get('/api/leagues' + query)
+        response = self.client.get('/leagues' + query)
         self.assertEqual(response.status_code, 200)
         return {league['league_id'] for league in response.get_json()}
 
@@ -68,7 +68,7 @@ class LeagueFilterTests(unittest.TestCase):
     def test_invalid_filters_return_bad_request(self):
         for query in ('?year=abc', '?year=', '?offseason=maybe', '?offseason='):
             with self.subTest(query=query):
-                self.assertEqual(self.client.get('/api/leagues' + query).status_code, 400)
+                self.assertEqual(self.client.get('/leagues' + query).status_code, 400)
 
     def test_year_with_no_leagues_returns_empty_list(self):
         self.assertEqual(self.ids('?year=1900'), set())
@@ -79,11 +79,11 @@ class LeagueFilterTests(unittest.TestCase):
     def test_retrieve_active_and_inactive_leagues_by_id(self):
         for league_id in (1, 5, 6):
             with self.subTest(league_id=league_id):
-                response = self.client.get(f'/api/leagues/{league_id}')
+                response = self.client.get(f'/leagues/{league_id}')
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.get_json()['league_id'], league_id)
 
     def test_retrieve_missing_league_returns_not_found(self):
-        response = self.client.get('/api/leagues/999')
+        response = self.client.get('/leagues/999')
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.get_json(), {'error': 'League not found'})
