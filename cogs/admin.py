@@ -3045,6 +3045,9 @@ class Admin(commands.Cog):
                         year=year,
                         lineups_locked=False,
                         scores_finalized=False,
+                        tuesday_processed=False,
+                        wednesday_processed=False,
+                        thursday_processed=False,
                         active=True,
                     )
                     session.add(weekStatToadd)
