@@ -1654,6 +1654,10 @@ def get_available_teams(draftId):
               year_end_epa:
                 type: integer
                 description: The year-end EPA from Statbotics data for the previous year.
+              match13_xp:
+                type: integer
+                x-nullable: true
+                description: Normalized match13 XP for the same season as EPA; null when unavailable.
       404:
         description: Draft not found
     """
@@ -1682,6 +1686,7 @@ def get_available_teams(draftId):
                         FRCEvent.event_key,
                         FRCEvent.week,
                         StatboticsData.year_end_epa,
+                        StatboticsData.match13_xp,
                     )
                     .join(TeamScore, Team.team_number == TeamScore.team_key)
                     .join(FRCEvent, TeamScore.event_key == FRCEvent.event_key)
@@ -1708,6 +1713,7 @@ def get_available_teams(draftId):
                         FRCEvent.event_key,
                         FRCEvent.week,
                         StatboticsData.year_end_epa,
+                        StatboticsData.match13_xp,
                     )
                     .join(TeamScore, Team.team_number == TeamScore.team_key)
                     .join(FRCEvent, TeamScore.event_key == FRCEvent.event_key)
@@ -1756,6 +1762,7 @@ def get_available_teams(draftId):
                         "name": team_name,  # Include team name in the response
                         "events": [],
                         "year_end_epa": year_end_epa,
+                        "match13_xp": row.match13_xp,
                     }
 
                 available_teams[team_number]["events"].append(
@@ -2043,6 +2050,51 @@ def get_team_epas():
 
     epa_map = {team: results.get(team) for team in teams}
     return jsonify(epa_map)
+
+
+@app.route("/api/xp", methods=["GET"])
+def get_team_xps():
+    """Return cached normalized match13 XP for the specified teams and year.
+    ---
+    tags:
+      - Teams
+    parameters:
+      - name: teams
+        in: query
+        type: string
+        required: true
+        description: Comma-separated team numbers.
+        example: "27,33"
+      - name: year
+        in: query
+        type: integer
+        required: true
+        example: 2026
+    responses:
+      200:
+        description: Team numbers mapped to integer normalized XP, or null when unavailable.
+        schema:
+          type: object
+          additionalProperties:
+            type: integer
+            x-nullable: true
+      400:
+        description: Missing teams or year parameter.
+    """
+    teams_param = request.args.get("teams")
+    year = request.args.get("year", type=int)
+
+    if not teams_param or year is None:
+        return jsonify({"error": "teams and year parameters are required"}), 400
+
+    teams = [t.strip() for t in teams_param.split(",") if t.strip()]
+    with Session() as session:
+        query = session.query(
+            StatboticsData.team_number, StatboticsData.match13_xp
+        ).filter(StatboticsData.year == year, StatboticsData.team_number.in_(teams))
+        results = {row.team_number: row.match13_xp for row in query.all()}
+
+    return jsonify({team: results.get(team) for team in teams})
 
 
 @app.route("/api/fimeventdata", methods=["GET"])
