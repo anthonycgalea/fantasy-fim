@@ -2721,15 +2721,25 @@ class Admin(commands.Cog):
     async def processWaivers(self, interaction: discord.Interaction):
         if await self.verifyAdmin(interaction):
             await interaction.response.send_message("Attempting to process waivers")
-            message = await interaction.original_response()
+            await self.processWaiversTask(interaction)
+
+    async def processWaiversTask(self, interaction=None):
+        """Shared manual/scheduled processing for the earliest active week."""
+        async with self._score_update_lock:
+            message = await interaction.original_response() if interaction is not None else None
             week: WeekStatus = await self.bot.getCurrentWeek()
+            if week is None:
+                if message is not None:
+                    await message.edit(content="No active week")
+                return False
             async with self.bot.async_session() as session:
                 leagues_result = await session.execute(
-                    select(League).where(League.active)
+                    select(League).where(League.active, League.year == week.year)
                 )
                 leagues = leagues_result.scalars().all()
                 if len(leagues) == 0:
-                    await message.edit(content="There are no active leagues!")
+                    if message is not None:
+                        await message.edit(content="There are no active leagues!")
                 else:
                     for league in leagues:
                         waiverReportEmbed = Embed(
@@ -2915,6 +2925,7 @@ class Admin(commands.Cog):
                         session.add_all(teamOnWaiversToAdd)
                         await session.flush()
                 await session.commit()
+            return True
 
     @app_commands.command(name="forceadddrop", description="Force an add/drop (ADMIN)")
     async def forceAddDrop(
