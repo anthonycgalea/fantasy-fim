@@ -100,31 +100,36 @@ class Admin(commands.Cog):
         self.bot = bot
         self._score_update_lock = asyncio.Lock()
 
-    async def put_teams_on_waivers(self, interaction: discord.Interaction):
+    async def put_teams_on_waivers(self, interaction=None, year=None, week=None):
         async with self.bot.async_session() as session:
-            message = await interaction.original_response()
+            message = await interaction.original_response() if interaction is not None else None
+            stmt = select(WeekStatus).where(WeekStatus.active)
+            if year is not None and week is not None:
+                stmt = stmt.where(WeekStatus.year == year, WeekStatus.week == week)
             result = await session.execute(
-                select(WeekStatus)
-                .where(WeekStatus.active)
-                .order_by(WeekStatus.year.asc(), WeekStatus.week.asc())
+                stmt.order_by(WeekStatus.year.asc(), WeekStatus.week.asc())
             )
             currentWeek = result.scalars().first()
 
             if not currentWeek:
-                await message.channel.send(
-                    content="No active weeks found. No teams will be put on waivers."
-                )
+                if message is not None:
+                    await message.channel.send(
+                        content="No active weeks found. No teams will be put on waivers."
+                    )
                 return
 
             leagues_result = await session.execute(
-                select(League).where(League.is_fim, League.active)
+                select(League).where(
+                    League.is_fim, League.active, League.year == currentWeek.year
+                )
             )
             leagues = leagues_result.scalars().all()
 
             if not leagues:
-                await message.channel.send(
-                    content="No active FIM leagues found. No teams will be put on waivers."
-                )
+                if message is not None:
+                    await message.channel.send(
+                        content="No active FIM leagues found. No teams will be put on waivers."
+                    )
                 return
 
             event_weeks = [currentWeek.week]
@@ -180,16 +185,18 @@ class Admin(commands.Cog):
                             session.add(wTeam)
                             await session.flush()
                     await session.commit()
-                    await message.channel.send(
-                        embed=Embed(
-                            title=f"Placed teams on waivers for league {league.league_name}",
-                            description=f"{teams_to_put_on_waivers}",
+                    if message is not None:
+                        await message.channel.send(
+                            embed=Embed(
+                                title=f"Placed teams on waivers for league {league.league_name}",
+                                description=f"{teams_to_put_on_waivers}",
+                            )
                         )
-                    )
                 else:
-                    await message.channel.send(
-                        content=f"No teams meet the criteria to be put on waivers for league {league.league_name}."
-                    )
+                    if message is not None:
+                        await message.channel.send(
+                            content=f"No teams meet the criteria to be put on waivers for league {league.league_name}."
+                        )
 
     @app_commands.command(
         name="updatexp", description="Update normalized match13 XP for a season (ADMIN)"
@@ -2720,22 +2727,34 @@ class Admin(commands.Cog):
                 await interaction.response.send_message("No active week")
                 return
             await interaction.response.defer()
-            message = await interaction.original_response()
-            await self.put_teams_on_waivers(interaction)
+            await self.finishWeekTask(currentWeek.year, currentWeek.week, interaction)
+
+    async def finishWeekTask(self, year, week, interaction=None, require_finalized=False):
+        """Shared manual/scheduled finish flow for one explicit week."""
+        async with self._score_update_lock:
             async with self.bot.async_session() as session:
-                weekToMod_result = await session.execute(
+                result = await session.execute(
                     select(WeekStatus).where(
-                        WeekStatus.year == currentWeek.year,
-                        WeekStatus.week == currentWeek.week,
+                        WeekStatus.year == year, WeekStatus.week == week
                     )
                 )
-                weekToMod = weekToMod_result.scalars().first()
-                weekToMod.active = False
-                weekToMod.lock_lineups = True
+                status = result.scalars().first()
+                if status is None or not status.active:
+                    return False
+                if require_finalized and not status.scores_finalized:
+                    return False
+            await self.put_teams_on_waivers(interaction, year=year, week=week)
+            async with self.bot.async_session() as session:
+                await session.execute(
+                    update(WeekStatus)
+                    .where(WeekStatus.year == year, WeekStatus.week == week)
+                    .values(active=False, lineups_locked=True)
+                )
                 await session.commit()
-            await message.edit(
-                content=f"Deactivated week {currentWeek.week} in {currentWeek.year}"
-            )
+            if interaction is not None:
+                message = await interaction.original_response()
+                await message.edit(content=f"Deactivated week {week} in {year}")
+            return True
 
     @app_commands.command(
         name="remind", description="Remind players to set their lineups (ADMIN)"
