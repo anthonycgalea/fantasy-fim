@@ -50,8 +50,8 @@ async def fetch_norm_xp(http, endpoint, headers, year):
                 continue
             if type(xp) not in (int, float) or not math.isfinite(xp):
                 raise ValueError(f"Invalid normXp for team {team}.")
-            # Match the existing integer EPA storage convention.
-            xp = int(xp)
+            # Round to the nearest integer before database storage.
+            xp = round(xp)
             if not -(2**31) <= xp < 2**31:
                 raise ValueError(f"normXp for team {team} exceeds integer storage.")
             values[str(team)] = xp
