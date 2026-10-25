@@ -10,6 +10,7 @@ from discord.ext import commands, tasks
 from sqlalchemy import delete, select, update
 
 from models.scores import WeekStatus
+from week_lifecycle import add_week_teams_to_waivers
 from models.transactions import TradeProposal, TradeTeams
 
 logger = logging.getLogger("discord")
@@ -93,6 +94,8 @@ class Announcements(commands.Cog):
                 )
                 locked_weeks = result.all()
                 if locked_weeks:
+                    for year, week in locked_weeks:
+                        await add_week_teams_to_waivers(session, year, week)
                     # Same cleanup as manually running /locklineups.
                     await session.execute(delete(TradeTeams))
                     await session.flush()
