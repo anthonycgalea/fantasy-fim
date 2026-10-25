@@ -4,13 +4,13 @@ from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session
 
 from cogs.announcements import Announcements, NEW_YORK
 from models.base import Base
 from models.draft import Draft  # Register draft tables referenced by scores.
-from models.transactions import WaiverPriority  # Register score relationships.
+from models.transactions import TradeProposal, TradeTeams, WaiverPriority
 from models.scores import WeekStatus
 from models.users import Player  # Register the players table referenced by metadata.
 
@@ -29,6 +29,9 @@ class AsyncSessionAdapter:
     async def begin(self):
         with self.session.begin():
             yield
+
+    async def flush(self):
+        self.session.flush()
 
     async def execute(self, stmt):
         return self.session.execute(stmt)
@@ -61,6 +64,49 @@ class AutomaticLineupLockTests(unittest.IsolatedAsyncioTestCase):
     def locked(self, week):
         with Session(self.engine) as session:
             return session.get(WeekStatus, (2026, week)).lineups_locked
+
+    def seed_trades(self):
+        with Session(self.engine) as session:
+            for trade_id, league_id in ((1, 1), (2, 2)):
+                session.add(TradeProposal(
+                    trade_id=trade_id, league_id=league_id,
+                    proposer_team_id=1, proposed_to_team_id=2,
+                    expiration=datetime.datetime(2026, 7, 20),
+                ))
+                session.add(TradeTeams(
+                    trade_id=trade_id, team_key="27", is_offered=True,
+                ))
+            session.commit()
+
+    def trade_counts(self):
+        with Session(self.engine) as session:
+            return (
+                session.scalar(select(func.count()).select_from(TradeTeams)),
+                session.scalar(select(func.count()).select_from(TradeProposal)),
+            )
+
+    async def test_auto_lock_clears_all_pending_trades_like_manual_command(self):
+        self.seed_trades()
+        await self.cog.lock_due_lineups(
+            datetime.datetime(2026, 7, 10, 16, tzinfo=NEW_YORK)
+        )
+        self.assertTrue(self.locked(1))
+        self.assertEqual(self.trade_counts(), (0, 0))
+
+    async def test_no_new_lock_leaves_pending_trades_untouched(self):
+        self.seed_trades()
+        await self.cog.lock_due_lineups(
+            datetime.datetime(2026, 7, 10, 15, 59, tzinfo=NEW_YORK)
+        )
+        self.assertEqual(self.trade_counts(), (2, 2))
+        await self.cog.lock_due_lineups(
+            datetime.datetime(2026, 7, 10, 16, tzinfo=NEW_YORK)
+        )
+        self.seed_trades()
+        await self.cog.lock_due_lineups(
+            datetime.datetime(2026, 7, 10, 16, 1, tzinfo=NEW_YORK)
+        )
+        self.assertEqual(self.trade_counts(), (2, 2))
 
     async def test_does_not_lock_before_four_pm(self):
         rows = await self.cog.lock_due_lineups(
