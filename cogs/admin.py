@@ -101,6 +101,10 @@ class Admin(commands.Cog):
         self.bot = bot
         self._score_update_lock = asyncio.Lock()
 
+    @app_commands.command(
+        name="updatexp", description="Update normalized match13 XP for a season (ADMIN)"
+    )
+    @app_commands.describe(year="Season year to update (1992–2100)")
     async def updateXp(self, interaction: discord.Interaction, year: int):
         if not await self.verifyAdmin(interaction):
             return
