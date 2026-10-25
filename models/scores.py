@@ -1,7 +1,8 @@
 import json
+from datetime import date
 
 from scipy.special import erfinv
-from sqlalchemy import Boolean, Double, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Date, Double, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -223,6 +224,7 @@ class WeekStatus(Base):
     __tablename__ = "weekstatus"
     year: Mapped[int] = mapped_column(Integer(), primary_key=True)
     week: Mapped[int] = mapped_column(Integer(), primary_key=True)
+    week_start_date: Mapped[date | None] = mapped_column(Date(), nullable=True)
     lineups_locked: Mapped[bool] = mapped_column(Boolean())
     scores_finalized: Mapped[bool] = mapped_column(Boolean())
     active: Mapped[bool] = mapped_column(Boolean())
