@@ -2777,6 +2777,7 @@ class Admin(commands.Cog):
                         )
                         waiverClaimsList = waiverClaims_result.scalars().all()
                         teamOnWaiversToAdd = []
+                        processed_claims = 0
                         if len(waiverClaimsList) > 0:
                             waiverNum = 1
                             waiverPriorities_result = await session.execute(
@@ -2821,6 +2822,7 @@ class Admin(commands.Cog):
                                 )
                                 if len(waiverClaimsForTeam) > 0:
                                     for waiverclaim in waiverClaimsForTeam:
+                                        processed_claims += 1
                                         isTeamOnWaivers_result = await session.execute(
                                             select(TeamOnWaivers).where(
                                                 TeamOnWaivers.league_id
@@ -2935,11 +2937,12 @@ class Admin(commands.Cog):
                             waiverReportEmbed.description += (
                                 "No waiver claims to process"
                             )
-                        channel = await self.bot.fetch_channel(
-                            int(league.discord_channel)
-                        )
-                        if not channel is None:
-                            await channel.send(embed=waiverReportEmbed)
+                        if processed_claims:
+                            channel = await self.bot.fetch_channel(
+                                int(league.discord_channel)
+                            )
+                            if channel is not None:
+                                await channel.send(embed=waiverReportEmbed)
                         await session.execute(
                             delete(TeamOnWaivers).where(
                                 TeamOnWaivers.league_id == league.league_id
