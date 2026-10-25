@@ -26,12 +26,14 @@ class Announcements(commands.Cog):
         self.weekend_score_update.start()
         self.final_score_check.start()
         self.finish_week_check.start()
+        self.waiver_processing.start()
 
     def cog_unload(self):
         self.lineup_lock_check.cancel()
         self.weekend_score_update.cancel()
         self.final_score_check.cancel()
         self.finish_week_check.cancel()
+        self.waiver_processing.cancel()
 
     async def send_announcement(self, content):
         raw_channel_id = os.getenv("ANNOUNCEMENTS_CHANNEL_ID")
@@ -221,6 +223,28 @@ class Announcements(commands.Cog):
                     await self.send_announcement(f"Deactivated week {week} in {year}")
             except Exception:
                 logger.exception("Automatic finish-week failed for %s week %s", year, week)
+
+
+    @tasks.loop(time=datetime.time(hour=7, tzinfo=NEW_YORK))
+    async def waiver_processing(self):
+        try:
+            await self.run_scheduled_waiver_processing()
+        except Exception:
+            logger.exception("Scheduled waiver processing failed.")
+
+    @waiver_processing.before_loop
+    async def before_waiver_processing(self):
+        await self.bot.wait_until_ready()
+
+    async def run_scheduled_waiver_processing(self, now=None):
+        now = datetime.datetime.now(NEW_YORK) if now is None else now.astimezone(NEW_YORK)
+        if now.weekday() not in (1, 2, 3):
+            return
+        admin = self.bot.get_cog("Admin")
+        if admin is None:
+            logger.error("Scheduled waivers skipped: Admin cog is not loaded.")
+            return
+        await admin.processWaiversTask()
 
 
 async def setup(bot):
