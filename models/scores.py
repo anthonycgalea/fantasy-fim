@@ -225,6 +225,7 @@ class WeekStatus(Base):
     year: Mapped[int] = mapped_column(Integer(), primary_key=True)
     week: Mapped[int] = mapped_column(Integer(), primary_key=True)
     week_start_date: Mapped[date | None] = mapped_column(Date(), nullable=True)
+    week_end_date: Mapped[date | None] = mapped_column(Date(), nullable=True)
     lineups_locked: Mapped[bool] = mapped_column(Boolean())
     scores_finalized: Mapped[bool] = mapped_column(Boolean())
     active: Mapped[bool] = mapped_column(Boolean())
