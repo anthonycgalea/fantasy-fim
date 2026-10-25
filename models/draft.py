@@ -56,6 +56,7 @@ class StatboticsData(Base):
         ForeignKey("teams.team_number"), primary_key=True
     )
     year: Mapped[int] = mapped_column(Integer(), primary_key=True)
-    year_end_epa: Mapped[int] = mapped_column(Integer())
+    year_end_epa: Mapped[int | None] = mapped_column(Integer(), nullable=True)
+    match13_xp: Mapped[int | None] = mapped_column(Integer(), nullable=True)
 
     team = relationship("Team")
