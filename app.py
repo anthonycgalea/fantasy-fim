@@ -1873,6 +1873,10 @@ def get_available_teams_fim(leagueId):
                     week:
                       type: integer
                       description: The week of the event.
+              match13_xp:
+                type: integer
+                x-nullable: true
+                description: Previous-season normalized match13 XP; null when unavailable.
       404:
         description: League not found or no available teams.
     """
@@ -1897,9 +1901,17 @@ def get_available_teams_fim(leagueId):
                     Team.name,
                     FRCEvent.event_key,
                     FRCEvent.week,
+                    StatboticsData.match13_xp,
                 )
                 .join(TeamScore, Team.team_number == TeamScore.team_key)
                 .join(FRCEvent, TeamScore.event_key == FRCEvent.event_key)
+                .outerjoin(
+                    StatboticsData,
+                    and_(
+                        Team.team_number == StatboticsData.team_number,
+                        StatboticsData.year == year - 1,
+                    ),
+                )
                 .outerjoin(
                     TeamOwned,
                     and_(
@@ -1937,6 +1949,7 @@ def get_available_teams_fim(leagueId):
                         "team_number": team_number,
                         "name": team_name,
                         "events": [],
+                        "match13_xp": row.match13_xp,
                     }
 
                 available_teams[team_number]["events"].append(
