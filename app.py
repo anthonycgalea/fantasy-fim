@@ -44,7 +44,7 @@ app.config["SWAGGER"] = {
     "specs": [
         {
             "endpoint": "apispec_1",
-            "route": "/api/apidocs/swagger.json",
+            "route": "/apidocs/swagger.json",
             "rule_filter": lambda rule: True,  # All rules are included
             "model_filter": lambda tag: True,  # All models are included
         }
@@ -53,7 +53,8 @@ app.config["SWAGGER"] = {
     "static_url_path": "/apidocs",
 }
 
-swagger_config = Swagger.DEFAULT_CONFIG
+swagger_config = Swagger.DEFAULT_CONFIG.copy()
+swagger_config["specs"] = app.config["SWAGGER"]["specs"]
 swagger_config["swagger_ui_bundle_js"] = (
     "//unpkg.com/swagger-ui-dist@3/swagger-ui-bundle.js"
 )
@@ -62,7 +63,7 @@ swagger_config["swagger_ui_standalone_preset_js"] = (
 )
 swagger_config["jquery_js"] = "//unpkg.com/jquery@2.2.4/dist/jquery.min.js"
 swagger_config["swagger_ui_css"] = "//unpkg.com/swagger-ui-dist@3/swagger-ui.css"
-swagger_config["specs_route"] = "/api/apidocs/"
+swagger_config["specs_route"] = "/apidocs/"
 
 swagger = Swagger(
     app,
@@ -73,8 +74,9 @@ swagger = Swagger(
             "description": "API documentation",
             "version": "1.0.0",
         },
-        "host": "fantasyfim.com",  # Update with your host
-        "basePath": "/api",  # This should match your API prefix
+        "host": "api.fantasyfim.com",
+        "basePath": "/",
+        "schemes": ["https"],
     },
     config=swagger_config,
 )
@@ -101,7 +103,7 @@ def init_schema():
         app._schema_initialized = True
 
 
-@app.route("/api/currentWeek", methods=["GET"])
+@app.route("/currentWeek", methods=["GET"])
 def get_current_week():
     """
     Retrieve the currently active week.
@@ -152,7 +154,7 @@ def get_current_week():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/leagues", methods=["GET"])
+@app.route("/leagues", methods=["GET"])
 def get_leagues():
     """
     Retrieve leagues for a year, optionally filtered by offseason status.
@@ -247,7 +249,7 @@ def get_leagues():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/leagues/<int:leagueId>", methods=["GET"])
+@app.route("/leagues/<int:leagueId>", methods=["GET"])
 def get_league(leagueId):
     """
     Retrieve a league's data, including inactive leagues.
@@ -311,7 +313,7 @@ def get_league(leagueId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/leagues/<int:leagueId>/fantasyTeams", methods=["GET"])
+@app.route("/leagues/<int:leagueId>/fantasyTeams", methods=["GET"])
 def get_fantasy_teams(leagueId):
     """
     Retrieve a list of fantasy teams for a specific league.
@@ -363,7 +365,7 @@ def get_fantasy_teams(leagueId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/leagues/<int:leagueId>/teamsOnWaivers", methods=["GET"])
+@app.route("/leagues/<int:leagueId>/teamsOnWaivers", methods=["GET"])
 def get_waiver_teams(leagueId):
     """
     Retrieve a list of teams on waivers for a specific league, including their registered events and Statbotics data.
@@ -466,7 +468,7 @@ def get_waiver_teams(leagueId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/leagues/<int:leagueId>/rosters", methods=["GET"])
+@app.route("/leagues/<int:leagueId>/rosters", methods=["GET"])
 def get_rosters(leagueId):
     """
     Retrieve the rosters for all fantasy teams in a specific league. Will only return data if league is_fim.
@@ -541,7 +543,7 @@ def get_rosters(leagueId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/leagues/<int:leagueId>/rosterWeeks", methods=["GET"])
+@app.route("/leagues/<int:leagueId>/rosterWeeks", methods=["GET"])
 def get_roster_weeks(leagueId):
     """
     Retrieve the weeks and events for teams on every fantasy team's roster in a specific league.
@@ -661,7 +663,7 @@ def get_roster_weeks(leagueId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/drafts/<int:draftId>/picks", methods=["GET"])
+@app.route("/drafts/<int:draftId>/picks", methods=["GET"])
 def get_draft_picks(draftId):
     """
     Retrieve a list of draft picks for a specific draft, including the events teams compete in with their weeks. Will not return week data if league.is_fim is false
@@ -761,7 +763,7 @@ def get_draft_picks(draftId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/drafts/<int:draftId>/draftOrder", methods=["GET"])
+@app.route("/drafts/<int:draftId>/draftOrder", methods=["GET"])
 def get_draft_order(draftId):
     """
     Get Draft Order for a Specific Draft
@@ -818,7 +820,7 @@ def get_draft_order(draftId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/leagues/<int:leagueId>/lineups", methods=["GET"])
+@app.route("/leagues/<int:leagueId>/lineups", methods=["GET"])
 def get_lineups(leagueId):
     """
     Retrieve the lineups for all fantasy teams in a specified league for all weeks.
@@ -947,7 +949,7 @@ def get_lineups(leagueId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/leagues/<int:leagueId>/fantasyScores/<int:week>", methods=["GET"])
+@app.route("/leagues/<int:leagueId>/fantasyScores/<int:week>", methods=["GET"])
 def get_fantasy_scores(leagueId, week):
     """
     Retrieve the fantasy scores for all fantasy teams in a specified league for a specific week.
@@ -1104,7 +1106,7 @@ def get_fantasy_scores(leagueId, week):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/drafts/<int:draftId>/fantasyScores", methods=["GET"])
+@app.route("/drafts/<int:draftId>/fantasyScores", methods=["GET"])
 def get_draft_scores(draftId):
     """
     Retrieve the fantasy scores for all fantasy teams in a specified draft (use for single event leagues).
@@ -1269,7 +1271,7 @@ def get_draft_scores(draftId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/leagues/<int:leagueId>/waiverPriority", methods=["GET"])
+@app.route("/leagues/<int:leagueId>/waiverPriority", methods=["GET"])
 def get_waiver_priority(leagueId):
     """
     Get Waiver Priority for a Specific League, including Fantasy Team names. If league isn't FiM then return an empty array.
@@ -1354,7 +1356,7 @@ def get_waiver_priority(leagueId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/leagues/<int:leagueId>/rankings", methods=["GET"])
+@app.route("/leagues/<int:leagueId>/rankings", methods=["GET"])
 def get_league_rankings(leagueId):
     """
     Retrieve cumulative rankings per week for every team in a league, sorted by cumulative ranking points,
@@ -1476,7 +1478,7 @@ def get_league_rankings(leagueId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/leagues/<int:leagueId>/statesTeams", methods=["GET"])
+@app.route("/leagues/<int:leagueId>/statesTeams", methods=["GET"])
 def get_states_round_team_ids(leagueId):
     """
     Retrieve the top 3 fantasy team IDs in the states round based on total ranking points,
@@ -1552,7 +1554,7 @@ def get_states_round_team_ids(leagueId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/leagues/<int:leagueId>/drafts", methods=["GET"])
+@app.route("/leagues/<int:leagueId>/drafts", methods=["GET"])
 def get_league_drafts(leagueId):
     """
     Retrieve all drafts in a league with their draft ID, round, and event key.
@@ -1612,7 +1614,7 @@ def get_league_drafts(leagueId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/drafts/<int:draftId>/availableTeams", methods=["GET"])
+@app.route("/drafts/<int:draftId>/availableTeams", methods=["GET"])
 def get_available_teams(draftId):
     """
     Retrieve all available teams for a specific draft, including their registered events and Statbotics data.
@@ -1774,7 +1776,7 @@ def get_available_teams(draftId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/drafts/<int:draftId>", methods=["GET"])
+@app.route("/drafts/<int:draftId>", methods=["GET"])
 def get_draft_info(draftId):
     """
     Retrieve generic information for a specific draft.
@@ -1833,7 +1835,7 @@ def get_draft_info(draftId):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/leagues/<int:leagueId>/availableTeams", methods=["GET"])
+@app.route("/leagues/<int:leagueId>/availableTeams", methods=["GET"])
 def get_available_teams_fim(leagueId):
     """
     Retrieve a list of available teams not on a fantasy team or on waivers,
@@ -1966,7 +1968,7 @@ def get_available_teams_fim(leagueId):
 
 
 @cache.cached(timeout=86400)
-@app.route("/api/team-avatar/<team_number>/year/<year>", methods=["GET"])
+@app.route("/team-avatar/<team_number>/year/<year>", methods=["GET"])
 def get_team_avatar(team_number, year):
     requestURL = TBA_API_ENDPOINT + f"team/frc{team_number}/media/{year}"
     response = requests.get(
@@ -1990,7 +1992,7 @@ def get_team_avatar(team_number, year):
 
 
 # New endpoint to fetch cached EPA values for multiple teams
-@app.route("/api/epa", methods=["GET"])
+@app.route("/epa", methods=["GET"])
 def get_team_epas():
     """Return cached EPA values for the specified teams and year.
 
@@ -2090,7 +2092,7 @@ def get_team_epas():
     return jsonify(epa_map)
 
 
-@app.route("/api/xp", methods=["GET"])
+@app.route("/xp", methods=["GET"])
 def get_team_xps():
     """Return cached normalized match13 XP for the specified teams and year.
     ---
@@ -2135,7 +2137,7 @@ def get_team_xps():
     return jsonify({team: results.get(team) for team in teams})
 
 
-@app.route("/api/fimeventdata", methods=["GET"])
+@app.route("/fimeventdata", methods=["GET"])
 def get_fim_event_data():
     """
     Retrieve FiM event statistics
@@ -2261,9 +2263,9 @@ def get_fim_event_data():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/eventData", methods=["GET"])
+@app.route("/eventData", methods=["GET"])
 def get_event_data():
-    """Alias for ``/api/fimeventdata`` maintained for backwards compatibility."""
+    """Alias for ``/fimeventdata`` maintained for backwards compatibility."""
     return get_fim_event_data()
 
 
