@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 
 from cogs.announcements import Announcements, NEW_YORK
 from models.base import Base
+from models.draft import Draft  # Register draft tables referenced by scores.
+from models.transactions import WaiverPriority  # Register score relationships.
 from models.scores import WeekStatus
 from models.users import Player  # Register the players table referenced by metadata.
 
