@@ -127,12 +127,16 @@ class DistrictWeekStatusTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(row.active)
             self.assertFalse(row.lineups_locked)
             self.assertFalse(row.scores_finalized)
+            self.assertFalse(row.tuesday_processed)
+            self.assertFalse(row.wednesday_processed)
+            self.assertFalse(row.thursday_processed)
 
     async def test_preserves_existing_flags_and_updates_rescheduled_date(self):
         with Session(self.engine) as session:
             session.add(WeekStatus(
                 year=2026, week=1, week_start_date=datetime.date(2026, 3, 1),
                 active=True, lineups_locked=True, scores_finalized=True,
+                tuesday_processed=True, wednesday_processed=True, thursday_processed=True,
             ))
             session.commit()
         await self.import_events([
@@ -145,6 +149,9 @@ class DistrictWeekStatusTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(row.active)
             self.assertTrue(row.lineups_locked)
             self.assertTrue(row.scores_finalized)
+            self.assertTrue(row.tuesday_processed)
+            self.assertTrue(row.wednesday_processed)
+            self.assertTrue(row.thursday_processed)
 
     async def test_week_eight_and_missing_dates_do_not_create_weekstatus(self):
         await self.import_events([

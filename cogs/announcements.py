@@ -10,6 +10,7 @@ from discord.ext import commands, tasks
 from sqlalchemy import delete, select, update
 
 from models.scores import WeekStatus
+from week_lifecycle import add_week_teams_to_waivers
 from models.transactions import TradeProposal, TradeTeams
 
 logger = logging.getLogger("discord")
@@ -23,10 +24,16 @@ class Announcements(commands.Cog):
     async def cog_load(self):
         self.lineup_lock_check.start()
         self.weekend_score_update.start()
+        self.final_score_check.start()
+        self.finish_week_check.start()
+        self.waiver_processing.start()
 
     def cog_unload(self):
         self.lineup_lock_check.cancel()
         self.weekend_score_update.cancel()
+        self.final_score_check.cancel()
+        self.finish_week_check.cancel()
+        self.waiver_processing.cancel()
 
     async def send_announcement(self, content):
         raw_channel_id = os.getenv("ANNOUNCEMENTS_CHANNEL_ID")
@@ -89,6 +96,8 @@ class Announcements(commands.Cog):
                 )
                 locked_weeks = result.all()
                 if locked_weeks:
+                    for year, week in locked_weeks:
+                        await add_week_teams_to_waivers(session, year, week)
                     # Same cleanup as manually running /locklineups.
                     await session.execute(delete(TradeTeams))
                     await session.flush()
@@ -132,6 +141,115 @@ class Announcements(commands.Cog):
                 await admin.runScoreUpdate(None, year, week, final=False, states=False)
             except Exception:
                 logger.exception("Scheduled scoring failed for %s week %s", year, week)
+
+
+    @tasks.loop(seconds=60)
+    async def final_score_check(self):
+        try:
+            await self.run_due_final_score_updates()
+        except Exception:
+            logger.exception("Automatic final score check failed.")
+
+    @final_score_check.before_loop
+    async def before_final_score_check(self):
+        await self.bot.wait_until_ready()
+
+    async def run_due_final_score_updates(self, now=None):
+        now = datetime.datetime.now(NEW_YORK) if now is None else now.astimezone(NEW_YORK)
+        cutoff_date = now.date()
+        if now.hour < 21:
+            cutoff_date -= datetime.timedelta(days=1)
+        async with self.bot.async_session() as session:
+            result = await session.execute(
+                select(WeekStatus.year, WeekStatus.week)
+                .where(
+                    WeekStatus.active.is_(True),
+                    WeekStatus.scores_finalized.is_(False),
+                    WeekStatus.week_end_date.is_not(None),
+                    WeekStatus.week_end_date <= cutoff_date,
+                )
+                .order_by(WeekStatus.year, WeekStatus.week)
+            )
+            weeks = result.all()
+        if not weeks:
+            return
+        admin = self.bot.get_cog("Admin")
+        if admin is None:
+            logger.error("Automatic final scoring skipped: Admin cog is not loaded.")
+            return
+        for year, week in weeks:
+            try:
+                await admin.runScoreUpdate(None, year, week, final=True, states=False)
+            except Exception:
+                # Failed scoring remains unfinalized and is retried next minute.
+                logger.exception("Automatic final scoring failed for %s week %s", year, week)
+
+
+    @tasks.loop(seconds=60)
+    async def finish_week_check(self):
+        try:
+            await self.run_due_week_finishes()
+        except Exception:
+            logger.exception("Automatic finish-week check failed.")
+
+    @finish_week_check.before_loop
+    async def before_finish_week_check(self):
+        await self.bot.wait_until_ready()
+
+    async def run_due_week_finishes(self, now=None):
+        now = datetime.datetime.now(NEW_YORK) if now is None else now.astimezone(NEW_YORK)
+        async with self.bot.async_session() as session:
+            result = await session.execute(
+                select(WeekStatus.year, WeekStatus.week)
+                .where(
+                    WeekStatus.active.is_(True),
+                    WeekStatus.scores_finalized.is_(True),
+                    WeekStatus.week_end_date.is_not(None),
+                    WeekStatus.week_end_date < now.date(),
+                )
+                .order_by(WeekStatus.year, WeekStatus.week)
+            )
+            weeks = result.all()
+        if not weeks:
+            return
+        admin = self.bot.get_cog("Admin")
+        if admin is None:
+            logger.error("Automatic finish-week skipped: Admin cog is not loaded.")
+            return
+        for year, week in weeks:
+            try:
+                finished = await admin.finishWeekTask(year, week, require_finalized=True)
+                if finished:
+                    await self.send_announcement(f"Deactivated week {week} in {year}")
+            except Exception:
+                logger.exception("Automatic finish-week failed for %s week %s", year, week)
+
+
+    @tasks.loop(seconds=60)
+    async def waiver_processing(self):
+        try:
+            await self.run_scheduled_waiver_processing()
+        except Exception:
+            logger.exception("Scheduled waiver processing failed.")
+
+    @waiver_processing.before_loop
+    async def before_waiver_processing(self):
+        await self.bot.wait_until_ready()
+
+    async def run_scheduled_waiver_processing(self, now=None):
+        now = datetime.datetime.now(NEW_YORK) if now is None else now.astimezone(NEW_YORK)
+        if now.weekday() not in (1, 2, 3) or now.hour < 7:
+            return
+        admin = self.bot.get_cog("Admin")
+        if admin is None:
+            logger.error("Scheduled waivers skipped: Admin cog is not loaded.")
+            return
+        processed_field = {
+            1: "tuesday_processed",
+            2: "wednesday_processed",
+            3: "thursday_processed",
+        }[now.weekday()]
+        await admin.processWaiversTask(processed_field=processed_field)
 
 
 async def setup(bot):
