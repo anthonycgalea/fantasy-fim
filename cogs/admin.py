@@ -15,6 +15,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import selectinload
 
 from match13 import fetch_norm_xp
+from week_lifecycle import add_week_teams_to_waivers
 
 import cogs.drafting as drafting
 import cogs.manageteam as manageteam
@@ -100,108 +101,6 @@ class Admin(commands.Cog):
         self.bot = bot
         self._score_update_lock = asyncio.Lock()
 
-    async def put_teams_on_waivers(self, interaction=None, year=None, week=None):
-        async with self.bot.async_session() as session:
-            message = await interaction.original_response() if interaction is not None else None
-            stmt = select(WeekStatus).where(WeekStatus.active)
-            if year is not None and week is not None:
-                stmt = stmt.where(WeekStatus.year == year, WeekStatus.week == week)
-            result = await session.execute(
-                stmt.order_by(WeekStatus.year.asc(), WeekStatus.week.asc())
-            )
-            currentWeek = result.scalars().first()
-
-            if not currentWeek:
-                if message is not None:
-                    await message.channel.send(
-                        content="No active weeks found. No teams will be put on waivers."
-                    )
-                return
-
-            leagues_result = await session.execute(
-                select(League).where(
-                    League.is_fim, League.active, League.year == currentWeek.year
-                )
-            )
-            leagues = leagues_result.scalars().all()
-
-            if not leagues:
-                if message is not None:
-                    await message.channel.send(
-                        content="No active FIM leagues found. No teams will be put on waivers."
-                    )
-                return
-
-            event_weeks = [currentWeek.week]
-            # 2026 special case: when finishing week 5, also waive week 6 teams.
-            if currentWeek.year == 2026 and currentWeek.week == 5:
-                event_weeks.append(6)
-
-            for league in leagues:
-                competing_result = await session.execute(
-                    select(TeamScore.team_key)
-                    .join(Team, Team.team_number == TeamScore.team_key)
-                    .join(FRCEvent, TeamScore.event_key == FRCEvent.event_key)
-                    .where(Team.is_fim, FRCEvent.week.in_(event_weeks))
-                    .where(FRCEvent.year == currentWeek.year)
-                )
-                competing_teams = competing_result.all()
-
-                teams_to_put_on_waivers = []
-                for team_number in competing_teams:
-                    owned_result = await session.execute(
-                        select(TeamOwned).where(
-                            TeamOwned.league_id == league.league_id,
-                            TeamOwned.team_key == team_number[0],
-                        )
-                    )
-                    is_owned = owned_result.scalars().first() is not None
-                    waivers_result = await session.execute(
-                        select(TeamOnWaivers).where(
-                            TeamOnWaivers.team_number == team_number[0],
-                            TeamOnWaivers.league_id == league.league_id,
-                        )
-                    )
-                    is_on_waivers = waivers_result.scalars().first() is not None
-
-                    if not is_owned and not is_on_waivers:
-                        teams_to_put_on_waivers.append(team_number[0])
-
-                if teams_to_put_on_waivers:
-                    team_on_waivers_objects = [
-                        TeamOnWaivers(
-                            league_id=league.league_id, team_number=team_number
-                        )
-                        for team_number in teams_to_put_on_waivers
-                    ]
-                    for wTeam in team_on_waivers_objects:
-                        check_result = await session.execute(
-                            select(TeamOnWaivers).where(
-                                TeamOnWaivers.league_id == league.league_id,
-                                TeamOnWaivers.team_number == wTeam.team_number,
-                            )
-                        )
-                        if check_result.scalars().first() is None:
-                            session.add(wTeam)
-                            await session.flush()
-                    await session.commit()
-                    if message is not None:
-                        await message.channel.send(
-                            embed=Embed(
-                                title=f"Placed teams on waivers for league {league.league_name}",
-                                description=f"{teams_to_put_on_waivers}",
-                            )
-                        )
-                else:
-                    if message is not None:
-                        await message.channel.send(
-                            content=f"No teams meet the criteria to be put on waivers for league {league.league_name}."
-                        )
-
-    @app_commands.command(
-        name="updatexp", description="Update normalized match13 XP for a season (ADMIN)"
-    )
-    @app_commands.describe(year="Season year to update (1992–2100)")
     async def updateXp(self, interaction: discord.Interaction, year: int):
         if not await self.verifyAdmin(interaction):
             return
@@ -2708,6 +2607,7 @@ class Admin(commands.Cog):
                 )
                 weekToMod = weekToMod_result.scalars().first()
                 weekToMod.lineups_locked = True
+                await add_week_teams_to_waivers(session, currentWeek.year, currentWeek.week)
                 await session.execute(delete(TradeTeams))
                 await session.flush()
                 await session.execute(delete(TradeProposal))
@@ -2743,7 +2643,6 @@ class Admin(commands.Cog):
                     return False
                 if require_finalized and not status.scores_finalized:
                     return False
-            await self.put_teams_on_waivers(interaction, year=year, week=week)
             async with self.bot.async_session() as session:
                 await session.execute(
                     update(WeekStatus)
