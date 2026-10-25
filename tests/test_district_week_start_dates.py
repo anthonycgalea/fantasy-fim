@@ -6,15 +6,15 @@ from unittest.mock import AsyncMock, Mock, patch
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from cogs.admin import Admin, get_district_week_start_dates
+from cogs.admin import Admin, get_district_week_start_dates, get_district_week_end_dates
 from models.base import Base
 from models.scores import WeekStatus
 
 
-def event(key, week, start_date, event_type=1):
+def event(key, week, start_date, event_type=1, end_date=None):
     return {
         "key": key, "name": key, "week": week,
-        "start_date": start_date, "event_type": event_type,
+        "start_date": start_date, "end_date": end_date, "event_type": event_type,
     }
 
 
@@ -43,6 +43,28 @@ class WeekStartDateSelectionTests(unittest.TestCase):
             event("2026unsupported", 0, "2026-03-01", event_type=0),
         ]
         self.assertEqual(get_district_week_start_dates(events, 2026), {})
+
+
+    def test_latest_end_date_can_come_from_a_different_event(self):
+        events = [
+            event("2026early", 0, "2026-03-05", end_date="2026-03-07"),
+            event("2026late", 0, "2026-03-06", end_date="2026-03-08"),
+            event("2026last", 6, "2026-04-16", end_date="2026-04-18"),
+        ]
+        self.assertEqual(get_district_week_end_dates(events, 2026), {
+            1: datetime.date(2026, 3, 8), 7: datetime.date(2026, 4, 18),
+        })
+        self.assertEqual(get_district_week_start_dates(events, 2026)[1],
+                         datetime.date(2026, 3, 5))
+
+    def test_invalid_end_dates_and_week_eight_are_ignored(self):
+        self.assertEqual(get_district_week_end_dates([
+            event("2026week8", 7, None, end_date="2026-04-25"),
+            event("2026missing", 0, None),
+            event("2026invalid", 0, None, end_date="bad"),
+            event("2026wrongyear", 0, None, end_date="2025-03-08"),
+            event("2026wrongtype", 0, None, event_type=0, end_date="2026-03-08"),
+        ], 2026), {})
 
 
 class AsyncSessionAdapter:
@@ -131,6 +153,53 @@ class DistrictWeekStatusTests(unittest.IsolatedAsyncioTestCase):
         ])
         with Session(self.engine) as session:
             self.assertEqual(session.query(WeekStatus).count(), 0)
+
+
+    async def test_creates_end_only_week_with_expected_defaults(self):
+        await self.import_events([
+            event("2026endonly", 0, None, end_date="2026-03-08"),
+        ])
+        with Session(self.engine) as session:
+            row = session.get(WeekStatus, (2026, 1))
+            self.assertIsNotNone(row)
+            self.assertIsNone(row.week_start_date)
+            self.assertEqual(row.week_end_date, datetime.date(2026, 3, 8))
+            self.assertTrue(row.active)
+            self.assertFalse(row.lineups_locked)
+            self.assertFalse(row.scores_finalized)
+
+    async def test_updates_latest_end_date_and_preserves_flags_and_missing_start(self):
+        with Session(self.engine) as session:
+            session.add(WeekStatus(
+                year=2026, week=1, week_start_date=datetime.date(2026, 3, 5),
+                week_end_date=datetime.date(2026, 3, 15),
+                active=False, lineups_locked=True, scores_finalized=True,
+            ))
+            session.commit()
+        await self.import_events([
+            event("2026first", 0, None, end_date="2026-03-07"),
+            event("2026second", 0, None, end_date="2026-03-08"),
+        ])
+        with Session(self.engine) as session:
+            row = session.get(WeekStatus, (2026, 1))
+            self.assertEqual(row.week_start_date, datetime.date(2026, 3, 5))
+            self.assertEqual(row.week_end_date, datetime.date(2026, 3, 8))
+            self.assertFalse(row.active)
+            self.assertTrue(row.lineups_locked)
+            self.assertTrue(row.scores_finalized)
+
+    async def test_missing_end_date_preserves_existing_end(self):
+        with Session(self.engine) as session:
+            session.add(WeekStatus(
+                year=2026, week=1, week_end_date=datetime.date(2026, 3, 8),
+                active=True, lineups_locked=False, scores_finalized=False,
+            ))
+            session.commit()
+        await self.import_events([event("2026first", 0, "2026-03-05")])
+        with Session(self.engine) as session:
+            row = session.get(WeekStatus, (2026, 1))
+            self.assertEqual(row.week_start_date, datetime.date(2026, 3, 5))
+            self.assertEqual(row.week_end_date, datetime.date(2026, 3, 8))
 
 
 if __name__ == "__main__":
