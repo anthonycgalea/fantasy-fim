@@ -5,12 +5,16 @@ import os
 import random
 import traceback
 
+import aiohttp
 import discord
 import requests
 from discord import Embed, app_commands
 from discord.ext import commands
 from sqlalchemy import delete, or_, select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import selectinload
+
+from match13 import fetch_norm_xp
 
 import cogs.drafting as drafting
 import cogs.manageteam as manageteam
@@ -52,6 +56,7 @@ def get_tba_headers() -> dict:
 
 FORUM_CHANNEL_ID = os.getenv("DRAFT_FORUM_ID")
 STATBOTICS_ENDPOINT = "https://api.statbotics.io/v3/team_years"
+MATCH13_ENDPOINT = "https://actions.match13.com/v1/years/{year}/teams"
 
 
 class Admin(commands.Cog):
@@ -149,6 +154,89 @@ class Admin(commands.Cog):
                         content=f"No teams meet the criteria to be put on waivers for league {league.league_name}."
                     )
 
+    @app_commands.command(
+        name="updatexp", description="Update normalized match13 XP for a season (ADMIN)"
+    )
+    @app_commands.describe(year="Season year to update (1992–2100)")
+    async def updateXp(self, interaction: discord.Interaction, year: int):
+        if not await self.verifyAdmin(interaction):
+            return
+        if not 1992 <= year <= 2100:
+            await interaction.response.send_message(
+                "Year must be between 1992 and 2100.", ephemeral=True
+            )
+            return
+        api_key = os.getenv("MATCH13_API_KEY")
+        if not api_key:
+            await interaction.response.send_message(
+                "MATCH13_API_KEY is not configured.", ephemeral=True
+            )
+            return
+        await interaction.response.defer(thinking=True)
+        try:
+            await self.updateXpTask(interaction, year, api_key)
+        except Exception:
+            # Do not log HTTP exception details, which may contain auth headers.
+            logger.error("match13 XP update failed for year %s", year)
+            await interaction.edit_original_response(
+                content="XP update failed. No XP changes were saved. Please try again."
+            )
+
+    async def updateXpTask(self, interaction, year, api_key):
+        await interaction.edit_original_response(
+            content=f"Fetching normalized match13 XP for {year}..."
+        )
+        timeout = aiohttp.ClientTimeout(total=60)
+        async with aiohttp.ClientSession(timeout=timeout) as http:
+            try:
+                values = await fetch_norm_xp(
+                    http,
+                    MATCH13_ENDPOINT.format(year=year),
+                    {"Authorization": f"Bearer {api_key}"},
+                    year,
+                )
+            except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, RuntimeError) as exc:
+                # Only our own status/validation errors are safe to show.
+                detail = (
+                    str(exc)
+                    if isinstance(exc, (ValueError, RuntimeError))
+                    and not isinstance(exc, aiohttp.ClientError)
+                    else "Could not read the match13 API."
+                )
+                await interaction.edit_original_response(
+                    content=f"XP update failed: {detail} No XP changes were saved."
+                )
+                return
+
+        async with self.bot.async_session() as session:
+            async with session.begin():
+                result = await session.execute(select(Team.team_number))
+                known_teams = set(result.scalars().all())
+                rows = [
+                    {"team_number": team, "year": year, "match13_xp": xp}
+                    for team, xp in values.items()
+                    if team in known_teams
+                ]
+                # One transaction for the whole season; preserve year_end_epa.
+                for offset in range(0, len(rows), 1000):
+                    stmt = insert(StatboticsData).values(rows[offset:offset + 1000])
+                    await session.execute(
+                        stmt.on_conflict_do_update(
+                            index_elements=["team_number", "year"],
+                            set_={"match13_xp": stmt.excluded.match13_xp},
+                        )
+                    )
+        try:
+            await interaction.edit_original_response(
+                content=(
+                    f"Updated normalized match13 XP for {len(rows)} teams in {year}. "
+                    f"Skipped {len(values) - len(rows)} teams not in the teams table. "
+                    "Values were truncated to integers; missing normXp values were left unchanged."
+                )
+            )
+        except discord.HTTPException:
+            logger.warning("XP update saved for %s, but Discord confirmation failed", year)
+
     async def updateStatboticsTask(self, interaction, year):
         embed = Embed(
             title="Update Team List",
@@ -162,12 +250,6 @@ class Admin(commands.Cog):
             return
         async with self.bot.async_session() as session:
             i = 0
-            delete_result = await session.execute(
-                delete(StatboticsData).where(StatboticsData.year == year)
-            )
-            deleted_count = delete_result.rowcount
-            await session.commit()
-            logger.info(f"Deleted {deleted_count} Statbotics records for {year}")
 
             offset = 0
             while True:
@@ -207,11 +289,15 @@ class Admin(commands.Cog):
                         logger.info(
                             f"Team number: {team_number} Year: {year} year_end_epa: {int(unitless_epa)}"
                         )
-                        session.add(
-                            StatboticsData(
-                                team_number=team_number,
-                                year=year,
-                                year_end_epa=int(unitless_epa),
+                        stmt = insert(StatboticsData).values(
+                            team_number=team_number,
+                            year=year,
+                            year_end_epa=int(unitless_epa),
+                        )
+                        await session.execute(
+                            stmt.on_conflict_do_update(
+                                index_elements=["team_number", "year"],
+                                set_={"year_end_epa": stmt.excluded.year_end_epa},
                             )
                         )
                     await session.commit()
