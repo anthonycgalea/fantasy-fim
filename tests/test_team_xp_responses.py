@@ -62,24 +62,24 @@ class TeamXPResponseTests(unittest.TestCase):
         self.engine.dispose()
 
     def test_xp_returns_scalar_map_including_zero_and_missing_values(self):
-        response = self.client.get("/api/xp?teams=27,33,99&year=2026")
+        response = self.client.get("/xp?teams=27,33,99&year=2026")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json(), {"27": 2129, "33": 0, "99": None})
         self.http.assert_not_called()
 
     def test_xp_uses_requested_year_and_trims_team_numbers(self):
-        response = self.client.get("/api/xp?teams=27,%2033&year=2027")
+        response = self.client.get("/xp?teams=27,%2033&year=2027")
         self.assertEqual(response.get_json(), {"27": 1900, "33": None})
 
     def test_epa_keeps_existing_scalar_response(self):
-        response = self.client.get("/api/epa?teams=27,33,99&year=2026")
+        response = self.client.get("/epa?teams=27,33,99&year=2026")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json(), {"27": None, "33": 2000, "99": None})
 
     def test_draft_xp_uses_same_season_as_epa_and_excludes_picked_teams(self):
         for draft_id, expected_epa, expected_xp in ((1, 0, 2129), (2, 1800, 1900)):
             with self.subTest(draft_id=draft_id):
-                response = self.client.get(f"/api/drafts/{draft_id}/availableTeams")
+                response = self.client.get(f"/drafts/{draft_id}/availableTeams")
                 self.assertEqual(response.status_code, 200)
                 teams = {row["team_number"]: row for row in response.get_json()}
                 self.assertEqual(teams["27"]["match13_xp"], expected_xp)
@@ -90,7 +90,7 @@ class TeamXPResponseTests(unittest.TestCase):
                     self.assertNotIn("33", teams)
 
     def test_xp_requires_parameters(self):
-        for url in ("/api/xp?teams=27", "/api/xp?year=2026", "/api/xp?teams=27&year=abc"):
+        for url in ("/xp?teams=27", "/xp?year=2026", "/xp?teams=27&year=abc"):
             self.assertEqual(self.client.get(url).status_code, 400)
 
 
