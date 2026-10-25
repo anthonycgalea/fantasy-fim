@@ -61,39 +61,20 @@ class TeamXPResponseTests(unittest.TestCase):
         self.session_patch.stop()
         self.engine.dispose()
 
-    def test_epa_returns_xp_including_zero_and_missing_values(self):
+    def test_xp_returns_scalar_map_including_zero_and_missing_values(self):
+        response = self.client.get("/api/xp?teams=27,33,99&year=2026")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), {"27": 2129, "33": 0, "99": None})
+        self.http.assert_not_called()
+
+    def test_xp_uses_requested_year_and_trims_team_numbers(self):
+        response = self.client.get("/api/xp?teams=27,%2033&year=2027")
+        self.assertEqual(response.get_json(), {"27": 1900, "33": None})
+
+    def test_epa_keeps_existing_scalar_response(self):
         response = self.client.get("/api/epa?teams=27,33,99&year=2026")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json(), {
-            "27": {"year_end_epa": None, "match13_xp": 2129},
-            "33": {"year_end_epa": 2000, "match13_xp": 0},
-            "99": {"year_end_epa": None, "match13_xp": None},
-        })
-        self.assertEqual(self.http.call_count, 2)
-
-    def test_epa_lookup_fills_xp_only_record_without_erasing_xp(self):
-        self.http.return_value = Mock(
-            status_code=200, json=Mock(return_value={"unitless_epa_end": 1987.9})
-        )
-        response = self.client.get("/api/epa?teams=27&year=2026")
-        self.assertEqual(response.get_json(), {
-            "27": {"year_end_epa": 1987, "match13_xp": 2129}
-        })
-        with self.sessions() as session:
-            row = session.get(StatboticsData, ("27", 2026))
-            self.assertEqual(row.year_end_epa, 1987)
-            self.assertEqual(row.match13_xp, 2129)
-
-    def test_epa_lookup_caches_new_record_with_null_xp(self):
-        self.http.return_value = Mock(
-            status_code=200, json=Mock(return_value={"unitless_epa_end": 1700})
-        )
-        response = self.client.get("/api/epa?teams=99&year=2026")
-        self.assertEqual(response.get_json(), {
-            "99": {"year_end_epa": 1700, "match13_xp": None}
-        })
-        with self.sessions() as session:
-            self.assertEqual(session.get(StatboticsData, ("99", 2026)).year_end_epa, 1700)
+        self.assertEqual(response.get_json(), {"27": None, "33": 2000, "99": None})
 
     def test_draft_xp_uses_same_season_as_epa_and_excludes_picked_teams(self):
         for draft_id, expected_epa, expected_xp in ((1, 0, 2129), (2, 1800, 1900)):
@@ -108,8 +89,8 @@ class TeamXPResponseTests(unittest.TestCase):
                 if draft_id == 1:
                     self.assertNotIn("33", teams)
 
-    def test_epa_requires_parameters(self):
-        for url in ("/api/epa?teams=27", "/api/epa?year=2026"):
+    def test_xp_requires_parameters(self):
+        for url in ("/api/xp?teams=27", "/api/xp?year=2026", "/api/xp?teams=27&year=abc"):
             self.assertEqual(self.client.get(url).status_code, 400)
 
 
