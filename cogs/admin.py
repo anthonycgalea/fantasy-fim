@@ -2723,7 +2723,11 @@ class Admin(commands.Cog):
             await interaction.response.send_message("Attempting to process waivers")
             await self.processWaiversTask(interaction)
 
-    async def processWaiversTask(self, interaction=None):
+    async def processWaiversTask(self, interaction=None, processed_field=None):
+        if processed_field not in (
+            None, "tuesday_processed", "wednesday_processed", "thursday_processed"
+        ):
+            raise ValueError("Invalid waiver processing flag.")
         """Shared manual/scheduled processing for the earliest active week."""
         async with self._score_update_lock:
             message = await interaction.original_response() if interaction is not None else None
@@ -2733,6 +2737,22 @@ class Admin(commands.Cog):
                     await message.edit(content="No active week")
                 return False
             async with self.bot.async_session() as session:
+                status = None
+                if processed_field is not None:
+                    result = await session.execute(
+                        select(WeekStatus)
+                        .where(
+                            WeekStatus.year == week.year,
+                            WeekStatus.week == week.week,
+                            WeekStatus.active.is_(True),
+                        )
+                        .with_for_update()
+                    )
+                    status = result.scalars().first()
+                    if status is None or getattr(status, processed_field) is True:
+                        return False
+                    if processed_field == "thursday_processed" and status.week == manageteam.STATESWEEK:
+                        return False
                 leagues_result = await session.execute(
                     select(League).where(League.active, League.year == week.year)
                 )
@@ -2740,6 +2760,7 @@ class Admin(commands.Cog):
                 if len(leagues) == 0:
                     if message is not None:
                         await message.edit(content="There are no active leagues!")
+                    return False
                 else:
                     for league in leagues:
                         waiverReportEmbed = Embed(
@@ -2924,6 +2945,8 @@ class Admin(commands.Cog):
                         await session.flush()
                         session.add_all(teamOnWaiversToAdd)
                         await session.flush()
+                if status is not None:
+                    setattr(status, processed_field, True)
                 await session.commit()
             return True
 
