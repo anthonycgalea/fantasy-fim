@@ -106,10 +106,17 @@ def init_schema():
 @app.route("/currentWeek", methods=["GET"])
 def get_current_week():
     """
-    Retrieve the currently active week.
+    Retrieve the currently active week, optionally filtered by year.
     ---
     tags:
       - Weeks
+    parameters:
+      - name: year
+        in: query
+        type: integer
+        required: false
+        description: Filter active weeks to this year. Omit to search all years.
+        example: 2026
     responses:
       200:
         description: The currently active week.
@@ -128,14 +135,24 @@ def get_current_week():
               type: boolean
             active:
               type: boolean
+      400:
+        description: Invalid year query parameter.
       404:
         description: No active week found.
     """
+    year_value = request.args.get("year")
+    try:
+        year = None if year_value is None else int(year_value)
+    except ValueError:
+        return jsonify({"error": "year must be an integer"}), 400
+
     try:
         with Session() as session:
+            query = session.query(WeekStatus).filter(WeekStatus.active)
+            if year is not None:
+                query = query.filter(WeekStatus.year == year)
             week = (
-                session.query(WeekStatus)
-                .filter(WeekStatus.active)
+                query
                 .order_by(WeekStatus.year.asc(), WeekStatus.week.asc())
                 .first()
             )

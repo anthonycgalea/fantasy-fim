@@ -101,10 +101,15 @@ Local documentation: [http://localhost:5000/apidocs/](http://localhost:5000/apid
 
 All API routes live at the root of the API host. For example:
 
-- `https://api.fantasyfim.com/currentWeek`
+- `https://api.fantasyfim.com/currentWeek?year=2026`
 - `https://api.fantasyfim.com/leagues`
 - `https://api.fantasyfim.com/xp?teams=27,33&year=2026`
 - `https://api.fantasyfim.com/drafts/1/availableTeams`
+
+`GET /currentWeek` accepts an optional integer `year` query parameter. When supplied,
+it returns the earliest active week in that year. When omitted, it retains the
+existing behavior of returning the earliest active week across all years. Invalid
+years return HTTP 400; no matching active week returns HTTP 404.
 
 There is no `/api` prefix. Swagger JSON is served at
 `https://api.fantasyfim.com/apidocs/swagger.json`.
