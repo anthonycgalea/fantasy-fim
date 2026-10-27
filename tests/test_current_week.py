@@ -25,6 +25,8 @@ class CurrentWeekTests(unittest.TestCase):
                 (2026, 2, True),
                 (2026, 4, True),
                 (2027, 1, False),
+                (2027, 6, False),
+                (2028, 2, False),
             ):
                 session.add(WeekStatus(
                     year=year, week=week, active=active,
@@ -58,14 +60,36 @@ class CurrentWeekTests(unittest.TestCase):
         self.assertEqual(response.get_json()["year"], 2026)
         self.assertEqual(response.get_json()["week"], 2)
 
-    def test_no_matching_active_week_returns_not_found(self):
-        for year in (2027, 1900):
-            with self.subTest(year=year):
-                response = self.client.get(f"/currentWeek?year={year}")
-                self.assertEqual(response.status_code, 404)
-                self.assertEqual(response.get_json(), {
-                    "error": "No active week found"
-                })
+    def test_no_active_week_returns_last_week_in_requested_year(self):
+        response = self.client.get("/currentWeek?year=2027")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), {
+            "year": 2027, "week": 6, "active": False,
+            "lineups_locked": True, "scores_finalized": False,
+        })
+
+    def test_no_active_weeks_without_year_returns_latest_year_then_week(self):
+        with self.session_factory() as session:
+            session.query(WeekStatus).update({"active": False})
+            session.commit()
+        response = self.client.get("/currentWeek")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["year"], 2028)
+        self.assertEqual(response.get_json()["week"], 2)
+        self.assertFalse(response.get_json()["active"])
+
+    def test_missing_year_returns_not_found_without_cross_year_fallback(self):
+        response = self.client.get("/currentWeek?year=1900")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.get_json(), {"error": "No weeks found"})
+
+    def test_no_weeks_returns_not_found(self):
+        with self.session_factory() as session:
+            session.query(WeekStatus).delete()
+            session.commit()
+        response = self.client.get("/currentWeek")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.get_json(), {"error": "No weeks found"})
 
     def test_invalid_year_returns_bad_request_before_querying(self):
         with patch.object(api, "Session") as session:
