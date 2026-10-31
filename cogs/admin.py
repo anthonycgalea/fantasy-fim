@@ -2365,8 +2365,8 @@ class Admin(commands.Cog):
         name="swapdraftpick", description="Replace a team's offseason draft pick (ADMIN)"
     )
     @app_commands.describe(
-        originalpick="FRC team number that was drafted",
-        replacementpick="Eligible, undrafted FRC team number to select instead",
+        originalpick="Team identifier that was drafted (e.g. 123 or 123B)",
+        replacementpick="Eligible, undrafted team identifier to select instead (e.g. 123B)",
     )
     async def swapDraftPick(
         self,
@@ -2383,18 +2383,16 @@ class Admin(commands.Cog):
         if draft is None:
             await message.edit(content="No draft associated with this channel.")
             return
-        if (
-            not originalpick.isascii()
-            or not originalpick.isdecimal()
-            or not replacementpick.isascii()
-            or not replacementpick.isdecimal()
-            or int(originalpick) <= 0
-            or int(replacementpick) <= 0
-        ):
-            await message.edit(content="Enter valid positive FRC team numbers.")
+        originalpick = originalpick.strip()
+        replacementpick = replacementpick.strip()
+        if any(not pick or pick == "-1" for pick in (originalpick, replacementpick)):
+            await message.edit(content="Enter valid team identifiers (e.g. 123 or 123B).")
             return
-        originalpick = str(int(originalpick))
-        replacementpick = str(int(replacementpick))
+        # Preserve offseason identifiers; retain normalization for numeric teams.
+        if originalpick.isascii() and originalpick.isdecimal():
+            originalpick = str(int(originalpick))
+        if replacementpick.isascii() and replacementpick.isdecimal():
+            replacementpick = str(int(replacementpick))
         if originalpick == replacementpick:
             await message.edit(content="The replacement must be a different team.")
             return

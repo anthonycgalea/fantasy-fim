@@ -77,6 +77,35 @@ class SwapDraftPickTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(session.scalar(select(TeamOwned.team_key)), '456')
         self.assertIn('fantasy team 5', self.message.edit.call_args.kwargs['content'])
 
+    async def test_swaps_b_team_identifiers_in_both_directions(self):
+        with Session(self.engine) as session:
+            session.add(TeamScore(team_key='123B', event_key='2026test'))
+            session.commit()
+        for original, replacement in [('123', '123B'), ('123B', '456')]:
+            with self.subTest(original=original, replacement=replacement):
+                await self.invoke(original, replacement)
+                self.assertEqual(self.pick(), replacement)
+                self.assertEqual(self.pick(2), '123')
+                with Session(self.engine) as session:
+                    self.assertEqual(session.scalar(select(TeamOwned.team_key)), replacement)
+
+    async def test_picked_and_ineligible_b_teams_rejected(self):
+        with Session(self.engine) as session:
+            session.add_all([
+                TeamScore(team_key='789B', event_key='2026test'),
+                DraftPick(draft_id=1, fantasy_team_id=6, pick_number=3,
+                          team_number='789B'),
+            ])
+            session.commit()
+        for replacement in ('789B', '999B'):
+            with self.subTest(replacement=replacement):
+                await self.invoke(replacement=replacement)
+                self.assertEqual(self.pick(), '123')
+
+    async def test_numeric_identifiers_still_normalized(self):
+        await self.invoke(' 00123 ', '00456')
+        self.assertEqual(self.pick(), '456')
+
     async def test_regular_season_rejected(self):
         with Session(self.engine) as session:
             session.get(League, 1).offseason = False
@@ -95,7 +124,8 @@ class SwapDraftPickTests(unittest.IsolatedAsyncioTestCase):
     async def test_invalid_swaps_leave_pick_unchanged(self):
         for original, replacement in [('123', '789'), ('123', '999'),
                                       ('999', '456'), ('123', '123'),
-                                      ('-1', '456'), ('123', 'abc')]:
+                                      ('-1', '456'), ('123', 'abc'),
+                                      ('', '456'), ('123', ' '), ('123', '-1')]:
             with self.subTest(original=original, replacement=replacement):
                 await self.invoke(original, replacement)
                 self.assertEqual(self.pick(), '123')
